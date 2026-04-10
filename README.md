@@ -2,97 +2,220 @@
   <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
 </p>
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+<h1 align="center">Greengrass Backend</h1>
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+<p align="center">Backend API cho ứng dụng Greengrass - Xây dựng với NestJS framework</p>
 
-## Description
+---
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Mô tả dự án
 
-## Project setup
+**Greengrass Backend** là một REST API được xây dựng bằng [NestJS](https://nestjs.com/) - framework Node.js tiến bộ dùng để xây dựng ứng dụng server-side hiệu quả và có khả năng mở rộng.
 
-```bash
-$ yarn install
-```
+Dự án bao gồm các chức năng chính:
 
-## Compile and run the project
+- **Xác thực người dùng** (Auth)
+- **Quản lý người dùng** (Users)
+- **Quản lý sự kiện** (Events)
+- **Đăng ký tham gia** (Registrations)
+- **Check-in** (Checkin)
+- **Gamification** (Hệ thống điểm thưởng)
+- **Bảng xếp hạng** (Leaderboard)
+- **Bản đồ** (Map)
+- **Diễn đàn** (Forum)
+- **Thông báo** (Notifications)
 
-```bash
-# development
-$ yarn run start
+---
 
-# watch mode
-$ yarn run start:dev
+## Yêu cầu hệ thống
 
-# production mode
-$ yarn run start:prod
-```
+- **Node.js**: phiên bản 18.x hoặc cao hơn
+- **Yarn**: package manager (đã cấu hình trong dự án)
+- **TypeScript**: ngôn ngữ chính của dự án
 
-## Run tests
+---
+
+## Clone và Cài đặt
+
+### 1. Clone repository về máy
 
 ```bash
-# unit tests
-$ yarn run test
+# Clone repository
+git clone <repository-url>
 
-# e2e tests
-$ yarn run test:e2e
-
-# test coverage
-$ yarn run test:cov
+# Di chuyển vào thư mục dự án
+cd greengrass-backend
 ```
 
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+### 2. Cài đặt dependencies
 
 ```bash
-$ yarn install -g @nestjs/mau
-$ mau deploy
+# Cài đặt tất cả các gói phụ thuộc bằng yarn
+yarn install
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+---
 
-## Resources
+## Chạy ứng dụng
 
-Check out a few resources that may come in handy when working with NestJS:
+### Các chế độ chạy
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+```bash
+# Chế độ phát triển (development)
+yarn start
 
-## Support
+# Chế độ watch - tự động reload khi có thay đổi file
+yarn start:dev
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+# Chế độ debug với watch
+yarn start:debug
 
-## Stay in touch
+# Chế độ production (sau khi đã build)
+yarn start:prod
+```
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+### Build dự án
+
+```bash
+# Biên dịch TypeScript sang JavaScript
+yarn build
+```
+
+Ứng dụng sẽ chạy tại: `http://localhost:3000` (hoặc port được cấu hình trong biến môi trường `PORT`)
+
+---
+
+## Chạy Tests
+
+Dự án sử dụng **Jest** làm framework testing.
+
+```bash
+# Chạy tất cả unit tests
+yarn test
+
+# Chạy tests ở chế độ watch (tự động chạy lại khi có thay đổi)
+yarn test:watch
+
+# Chạy tests và tạo báo cáo độ phủ code (coverage)
+yarn test:cov
+
+# Chạy tests ở chế độ debug
+yarn test:debug
+
+# Chạy end-to-end (e2e) tests
+yarn test:e2e
+```
+
+---
+
+## Cấu trúc thư mục và tác dụng
+
+```
+greengrass-backend/
+├── .git/                   # Repository Git
+├── dist/                   # Output sau khi build (TypeScript -> JavaScript)
+├── node_modules/           # Dependencies đã cài đặt
+├── src/                    # Source code chính
+│   ├── main.ts             # Entry point - khởi động ứng dụng NestJS
+│   ├── app.module.ts       # Root module - khai báo tất cả các module con
+│   ├── app.controller.ts   # Root controller - xử lý request chính
+│   ├── app.service.ts      # Root service - logic nghiệp vụ chính
+│   ├── app.controller.spec.ts  # Unit test cho app controller
+│   └── modules/            # Các module chức năng
+│       ├── auth/           # Xác thực người dùng (login, register, JWT)
+│       ├── checkin/        # Chức năng check-in
+│       ├── events/         # Quản lý sự kiện
+│       ├── forum/          # Diễn đàn thảo luận
+│       ├── gamification/   # Hệ thống điểm thưởng, badge
+│       ├── leaderboard/    # Bảng xếp hạng
+│       ├── map/            # Tích hợp bản đồ
+│       ├── notifications/  # Hệ thống thông báo
+│       ├── registrations/  # Đăng ký tham gia sự kiện
+│       └── users/          # Quản lý người dùng
+├── test/                   # End-to-end tests
+│   ├── app.e2e-spec.ts     # E2E test cho toàn bộ ứng dụng
+│   └── jest-e2e.json       # Cấu hình Jest cho e2e tests
+├── .gitignore              # Danh sách file/folder bị Git ignore
+├── .prettierrc             # Cấu hình Prettier (format code)
+├── eslint.config.mjs       # Cấu hình ESLint (kiểm tra code quality)
+├── nest-cli.json           # Cấu hình NestJS CLI
+├── package.json            # Thông tin dự án và dependencies
+├── tsconfig.json           # Cấu hình TypeScript chính
+├── tsconfig.build.json     # Cấu hình TypeScript cho build
+└── yarn.lock               # Lock file cho Yarn dependencies
+```
+
+### Chi tiết các file quan trọng
+
+| File/Folder         | Tác dụng                                             |
+| ------------------- | ---------------------------------------------------- |
+| `src/main.ts`       | Entry point, khởi tạo NestJS app và lắng nghe port   |
+| `src/app.module.ts` | Root module, import và tổ chức tất cả các module con |
+| `src/modules/`      | Chứa các module chức năng riêng biệt theo domain     |
+| `test/`             | Chứa end-to-end tests                                |
+| `package.json`      | Định nghĩa scripts và danh sách dependencies         |
+| `tsconfig.json`     | Cấu hình compiler TypeScript                         |
+| `nest-cli.json`     | Cấu hình cho NestJS CLI (build, generate, ...)       |
+| `.prettierrc`       | Quy tắc format code (singleQuote, trailingComma)     |
+| `eslint.config.mjs` | Quy tắc kiểm tra code quality và style               |
+
+---
+
+## Các scripts hữu ích
+
+| Script            | Mô tả                              |
+| ----------------- | ---------------------------------- |
+| `yarn build`      | Build dự án sang thư mục `dist/`   |
+| `yarn format`     | Format code với Prettier           |
+| `yarn lint`       | Kiểm tra và sửa lỗi ESLint         |
+| `yarn start`      | Chạy ứng dụng ở chế độ development |
+| `yarn start:dev`  | Chạy với watch mode (tự reload)    |
+| `yarn start:prod` | Chạy ứng dụng production           |
+| `yarn test`       | Chạy unit tests                    |
+| `yarn test:watch` | Chạy tests ở chế độ watch          |
+| `yarn test:cov`   | Chạy tests với coverage report     |
+| `yarn test:e2e`   | Chạy end-to-end tests              |
+
+---
+
+## Coding Standards
+
+Dự án tuân thủ các quy tắc:
+
+- **TypeScript**: Sử dụng strict null checks
+- **ESLint**: Kiểm tra code quality, tích hợp với TypeScript
+- **Prettier**: Format code tự động với single quote và trailing comma
+- **Testing**: Unit test cho controller và service, E2E test cho API endpoints
+
+---
+
+## Triển khai (Deployment)
+
+```bash
+# 1. Build dự án
+yarn build
+
+# 2. Chạy ở chế độ production
+yarn start:prod
+```
+
+Hoặc triển khai lên AWS với Mau:
+
+```bash
+yarn install -g @nestjs/mau
+mau deploy
+```
+
+---
+
+## Tài liệu tham khảo
+
+- [NestJS Documentation](https://docs.nestjs.com)
+- [TypeScript Handbook](https://www.typescriptlang.org/docs/)
+- [Jest Testing Framework](https://jestjs.io/)
+
+---
 
 ## License
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+Dự án này sử dụng license UNLICENSED.
