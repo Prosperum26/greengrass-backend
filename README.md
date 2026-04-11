@@ -50,9 +50,34 @@ cd greengrass-backend
 ### 2. Cài đặt dependencies
 
 ```bash
-# Cài đặt tất cả các gói phụ thuộc bằng yarn
+# Cài đặn tất cả các gói phụ thuộc bằng yarn (đã bao gồm Prisma)
 yarn install
 ```
+
+### 3. Thiết lập Prisma
+
+```bash
+# 1. Tạo file .env từ mẫu (nếu chưa có)
+cp .env.example .env
+
+# 2. Cập nhật DATABASE_URL trong file .env:
+# DATABASE_URL="postgresql://username:password@host:port/database?schema=public"
+# Ví dụ Supabase: DATABASE_URL="postgresql://postgres.xxx:[password]@aws-0-[region].pooler.supabase.com:6543/postgres?pgbouncer=true"
+
+# 3. Generate Prisma Client từ schema
+npx prisma generate
+
+# 4. Chạy migration để tạo bảng trong database (lần đầu hoặc khi schema thay đổi)
+npx prisma migrate dev --name init
+
+# 5. (Tùy chọn) Mở Prisma Studio để xem/quản lý dữ liệu
+npx prisma studio
+```
+
+**Lưu ý quan trọng:**
+
+- Sau khi pull code mới có thay đổi `schema.prisma`, chạy lại: `npx prisma generate`
+- Khi schema thay đổi cần migration mới: `npx prisma migrate dev --name [tên_migration]`
 
 ---
 

@@ -1,0 +1,108 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  STUDENT
+  ORGANIZER
+  ADMIN
+}
+
+enum EventStatus {
+  UPCOMING
+  ONGOING
+  COMPLETED
+}
+
+enum RegistrationStatus {
+  REGISTERED
+  CHECKED_IN
+  COMPLETED
+}
+
+enum ProofStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model User {
+  id              String            @id @default(uuid())
+  email           String            @unique
+  fullName        String
+  role            UserRole          @default(STUDENT)
+  totalPoints     Int               @default(0)
+  currentStreak   Int               @default(0)
+  avatarUrl       String?
+  createdAt       DateTime          @default(now())
+
+  eventRegistrations EventRegistration[]
+  pointHistories     PointHistory[]
+  userBadges         UserBadge[]
+}
+
+model Event {
+  id          String      @id @default(uuid())
+  title       String
+  description String
+  location    String
+  latitude    Float
+  longitude   Float
+  startTime   DateTime
+  endTime     DateTime
+  points      Int
+  qrSecret    String
+  status      EventStatus @default(UPCOMING)
+
+  eventRegistrations EventRegistration[]
+}
+
+model EventRegistration {
+  id          String             @id @default(uuid())
+  userId      String
+  eventId     String
+  status      RegistrationStatus @default(REGISTERED)
+  checkInTime   DateTime?
+  proofUrl    String?
+  proofStatus ProofStatus        @default(PENDING)
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, eventId])
+}
+
+model PointHistory {
+  id        String   @id @default(uuid())
+  userId    String
+  amount    Int
+  reason    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Badge {
+  id          String @id @default(uuid())
+  name        String
+  description String
+  iconUrl     String
+
+  userBadges UserBadge[]
+}
+
+model UserBadge {
+  id     String @id @default(uuid())
+  userId String
+  badgeId String
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badge Badge @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, badgeId])
+}
