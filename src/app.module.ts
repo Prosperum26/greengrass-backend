@@ -11,9 +11,22 @@ import { LeaderboardModule } from './modules/leaderboard/leaderboard.module';
 import { MapModule } from './modules/map/map.module';
 import { ForumModule } from './modules/forum/forum.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { PrismaModule } from './modules/prisma/prisma.module';
 
 @Module({
-  imports: [AuthModule, UsersModule, EventsModule, RegistrationsModule, CheckinModule, GamificationModule, LeaderboardModule, MapModule, ForumModule, NotificationsModule],
+  imports: [
+    PrismaModule,
+    AuthModule,
+    UsersModule,
+    EventsModule,
+    RegistrationsModule,
+    CheckinModule,
+    GamificationModule,
+    LeaderboardModule,
+    MapModule,
+    ForumModule,
+    NotificationsModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })
