@@ -35,9 +35,14 @@ model User {
   id              String            @id @default(uuid())
   email           String            @unique
   fullName        String
+  password        String?
   role            UserRole          @default(STUDENT)
+  
   totalPoints     Int               @default(0)
   currentStreak   Int               @default(0)
+
+  refreshToken    String? 
+
   avatarUrl       String?
   createdAt       DateTime          @default(now())
 
