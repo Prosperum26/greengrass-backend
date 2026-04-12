@@ -32,18 +32,21 @@ enum ProofStatus {
 }
 
 model User {
-  id              String            @id @default(uuid())
-  email           String            @unique
-  fullName        String
-  role            UserRole          @default(STUDENT)
-  totalPoints     Int               @default(0)
-  currentStreak   Int               @default(0)
-  avatarUrl       String?
-  createdAt       DateTime          @default(now())
+  id            String          @id @default(uuid())
+  email         String          @unique
+  fullName      String
+  role          UserRole        @default(STUDENT)
+  totalPoints   Int             @default(0)
+  currentStreak Int             @default(0)
+  avatarUrl     String?
+  createdAt     DateTime        @default(now())
 
   eventRegistrations EventRegistration[]
   pointHistories     PointHistory[]
   userBadges         UserBadge[]
+  
+  // THÊM: Mối quan hệ User làm người tổ chức sự kiện
+  organizedEvents    Event[]    @relation("EventOrganizer")
 }
 
 model Event {
@@ -59,7 +62,13 @@ model Event {
   qrSecret    String
   status      EventStatus @default(UPCOMING)
 
+  // THÊM: Cột lưu ID người tổ chức
+  organizerId String
+  organizer   User        @relation("EventOrganizer", fields: [organizerId], references: [id])
+
   eventRegistrations EventRegistration[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model EventRegistration {
@@ -67,9 +76,12 @@ model EventRegistration {
   userId      String
   eventId     String
   status      RegistrationStatus @default(REGISTERED)
-  checkInTime   DateTime?
+  checkInTime DateTime?
   proofUrl    String?
   proofStatus ProofStatus        @default(PENDING)
+  
+  // THÊM: Cột lưu thời gian đăng ký
+  createdAt   DateTime           @default(now())
 
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
   event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)

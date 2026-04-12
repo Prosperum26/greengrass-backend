@@ -7,6 +7,7 @@ import {
   HttpStatus,
   Param,
   Post,
+  Patch, 
   Query,
   Req,
   UseGuards,
@@ -17,39 +18,35 @@ import { CreateEventDto, GetEventsQueryDto } from './dto/create-event.dto';
 import { RolesGuard } from './guards/roles.guard';
 import { EventsService } from './events.service';
 
-// ─── Typed request (req.user populated by upstream auth middleware) ───────────
 
 interface AuthRequest extends Request {
   user: { id: string; role: 'STUDENT' | 'ORGANIZER' | 'ADMIN' };
 }
 
-// ─── Unified success wrapper ──────────────────────────────────────────────────
+
 
 const ok = <T>(data: T) => ({ success: true as const, data });
 
-// ─────────────────────────────────────────────────────────────────────────────
+
 
 @Controller('events')
 @UseGuards(RolesGuard)
 export class EventsController {
   constructor(private readonly eventsService: EventsService) {}
 
-  // ── Event endpoints ─────────────────────────────────────────────────────────
 
-  /**
-   * GET /events
-   * PUBLIC — ?status, ?keyword, ?dateFrom, ?dateTo, ?page, ?limit
-   */
   @Get()
   async getEvents(@Query() query: GetEventsQueryDto) {
     const data = await this.eventsService.getEvents(query);
     return ok(data);
   }
 
-  /**
-   * POST /events
-   * ORGANIZER only
-   */
+  @Get('full')
+  async getAllEvents() {
+    const data = await this.eventsService.getAllEvents();
+    return ok(data);
+  }
+
   @Post()
   @Roles('ORGANIZER')
   @HttpCode(HttpStatus.CREATED)
@@ -58,22 +55,43 @@ export class EventsController {
     return ok(data);
   }
 
-  /**
-   * GET /events/:id
-   * PUBLIC
-   */
   @Get(':id')
   async getEventById(@Param('id') id: string) {
     const data = await this.eventsService.getEventById(id);
     return ok(data);
   }
 
-  // ── Registration endpoints ──────────────────────────────────────────────────
 
-  /**
-   * POST /events/:id/register
-   * STUDENT only
-   */
+  @Patch(':id')
+  @Roles('ORGANIZER')
+  async updateEvent(
+    @Param('id') id: string,
+    @Body() dto: Partial<CreateEventDto>,
+    @Req() req: AuthRequest,
+  ) {
+    const data = await this.eventsService.updateEvent(
+      id,
+      dto,
+      req.user.id,
+    );
+    return ok(data);
+  }
+
+ 
+  @Delete(':id')
+  @Roles('ORGANIZER')
+  async deleteEvent(
+    @Param('id') id: string,
+    @Req() req: AuthRequest,
+  ) {
+    const data = await this.eventsService.deleteEvent(
+      id,
+      req.user.id,
+    );
+    return ok(data);
+  }
+
+
   @Post(':id/register')
   @Roles('STUDENT')
   @HttpCode(HttpStatus.CREATED)
@@ -82,10 +100,6 @@ export class EventsController {
     return ok(data);
   }
 
-  /**
-   * DELETE /events/:id/register
-   * STUDENT only
-   */
   @Delete(':id/register')
   @Roles('STUDENT')
   @HttpCode(HttpStatus.OK)
@@ -97,10 +111,6 @@ export class EventsController {
     return ok(data);
   }
 
-  /**
-   * GET /events/:id/participants
-   * PUBLIC
-   */
   @Get(':id/participants')
   async getParticipants(@Param('id') eventId: string) {
     const data = await this.eventsService.getParticipants(eventId);
