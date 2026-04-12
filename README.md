@@ -203,6 +203,101 @@ greengrass-backend/
 
 ---
 
+## API Endpoints
+
+---
+
+### Authentication
+- `POST /auth/register` – Đăng ký tài khoản sinh viên
+- `POST /auth/login` – Đăng nhập bằng email
+- `POST /auth/google` – Đăng nhập Google OAuth
+- `POST /auth/refresh` – Cấp lại access token
+
+---
+
+### Users
+- `GET /users/me` – Lấy thông tin tài khoản hiện tại
+- `PUT /users/me` – Cập nhật thông tin tài khoản
+- `GET /users/{id}/profile` – Xem profile public người dùng
+- `GET /users/me/events` – Lịch sử sự kiện đã tham gia
+- `GET /users/me/points` – Tổng quan điểm số
+- `GET /users/me/streak` – Chuỗi hoạt động xanh
+
+---
+
+### Events
+- `GET /events` – Danh sách sự kiện (filter, search, sort)
+- `POST /events` – Tạo sự kiện (Organizer)
+- `GET /events/{id}` – Chi tiết sự kiện
+
+---
+
+### Registration
+- `POST /events/{id}/register` – Đăng ký sự kiện
+- `DELETE /events/{id}/register` – Hủy đăng ký
+- `GET /events/{id}/participants` – Danh sách người tham gia
+
+---
+
+### Check-in & Proof
+- `GET /events/{id}/qr` – Lấy QR check-in (Organizer)
+- `POST /events/{id}/check-in` – Check-in bằng QR + GPS
+- `POST /events/{id}/proof` – Gửi minh chứng hoạt động
+- `GET /events/{id}/proofs` – Danh sách proof chờ duyệt (Organizer)
+- `PUT /events/{id}/proofs/{userId}` – Duyệt / từ chối proof
+
+---
+
+### Gamification
+- `GET /badges` – Danh sách huy hiệu
+- `GET /leaderboard` – Bảng xếp hạng
+
+---
+
+### Organizations
+- `GET /organizations` – Danh sách CLB / tổ chức
+- `GET /organizations/{id}/dashboard` – Dashboard thống kê
+
+---
+
+### Export Data
+- `GET /events/{id}/export` – Xuất CSV/Excel danh sách hoàn thành
+- `POST /events/{id}/export/email` – Gửi file qua email
+
+---
+
+### Map & Eco System
+- `GET /map/eco-points` – Điểm sinh thái gần bạn
+- `GET /map/routes` – Gợi ý lộ trình di chuyển xanh
+
+---
+
+### AI Assistant
+- `POST /assistant/chat` – Chatbot hỗ trợ thông minh
+- `GET /assistant/recommendations` – Gợi ý sự kiện cá nhân hóa
+
+---
+
+### Notifications
+- `GET /notifications` – Lấy danh sách thông báo
+
+---
+
+### WebSocket Events
+- `notification:new` – Thông báo realtime (badge, points)
+- `event:stats_update` – Cập nhật dashboard organizer
+- `event:dynamic_qr` – QR code tự động refresh mỗi 60s
+
+---
+
+### Security
+
+```http
+Authorization: Bearer <access_token>
+```
+
+---
+
 ## Coding Standards
 
 Dự án tuân thủ các quy tắc:
