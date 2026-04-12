@@ -56,4 +56,37 @@ export class CheckinController {
 
     return this.checkinService.checkIn(userId, eventId, checkInDto.qrToken);
   }
+
+  /**
+   * Get list of participants who have checked in
+   * For organizer dashboard
+   *
+   * @param eventId - The event ID
+   * @returns List of checked-in participants
+   */
+  @Get(':eventId/checked-in')
+  async getCheckedInParticipants(
+    @Param('eventId', ParseUUIDPipe) eventId: string,
+  ): Promise<Array<{ userId: string; checkInTime: Date; status: string }>> {
+    return this.checkinService.getCheckedInParticipants(eventId);
+  }
+
+  /**
+   * Get check-in statistics for an event
+   * For organizer dashboard
+   *
+   * @param eventId - The event ID
+   * @returns Check-in statistics
+   */
+  @Get(':eventId/check-in-stats')
+  async getCheckInStats(
+    @Param('eventId', ParseUUIDPipe) eventId: string,
+  ): Promise<{
+    totalRegistered: number;
+    checkedIn: number;
+    completed: number;
+    checkInRate: number;
+  }> {
+    return this.checkinService.getCheckInStats(eventId);
+  }
 }

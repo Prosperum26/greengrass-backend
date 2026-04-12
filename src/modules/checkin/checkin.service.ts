@@ -172,4 +172,94 @@ export class CheckinService {
       `[POINTS_STUB] Would add ${points} points to user ${userId} for event ${eventId}`,
     );
   }
+
+  /**
+   * Get list of participants who have checked in for an event
+   * For organizer dashboard
+   *
+   * @param eventId - The event ID
+   * @returns List of checked-in participants
+   */
+  async getCheckedInParticipants(
+    eventId: string,
+  ): Promise<Array<{ userId: string; checkInTime: Date; status: string }>> {
+    const event = await this.prisma.event.findUnique({
+      where: { id: eventId },
+    });
+
+    if (!event) {
+      throw new NotFoundException(`Event with ID ${eventId} not found`);
+    }
+
+    const checkedInRegistrations = await this.prisma.eventRegistration.findMany(
+      {
+        where: {
+          eventId,
+          status: {
+            in: [RegistrationStatus.CHECKED_IN, RegistrationStatus.COMPLETED],
+          },
+        },
+        select: {
+          userId: true,
+          checkInTime: true,
+          status: true,
+        },
+        orderBy: {
+          checkInTime: 'asc',
+        },
+      },
+    );
+
+    return checkedInRegistrations.map((reg) => ({
+      userId: reg.userId,
+      checkInTime: reg.checkInTime!,
+      status: reg.status,
+    }));
+  }
+
+  /**
+   * Get check-in statistics for an event
+   * For organizer dashboard
+   *
+   * @param eventId - The event ID
+   * @returns Check-in statistics
+   */
+  async getCheckInStats(eventId: string): Promise<{
+    totalRegistered: number;
+    checkedIn: number;
+    completed: number;
+    checkInRate: number;
+  }> {
+    const event = await this.prisma.event.findUnique({
+      where: { id: eventId },
+    });
+
+    if (!event) {
+      throw new NotFoundException(`Event with ID ${eventId} not found`);
+    }
+
+    const [totalRegistered, checkedIn, completed] = await Promise.all([
+      this.prisma.eventRegistration.count({
+        where: { eventId },
+      }),
+      this.prisma.eventRegistration.count({
+        where: { eventId, status: RegistrationStatus.CHECKED_IN },
+      }),
+      this.prisma.eventRegistration.count({
+        where: { eventId, status: RegistrationStatus.COMPLETED },
+      }),
+    ]);
+
+    const checkInRate =
+      totalRegistered > 0
+        ? ((checkedIn + completed) / totalRegistered) * 100
+        : 0;
+
+    return {
+      totalRegistered,
+      checkedIn,
+      completed,
+      checkInRate: Math.round(checkInRate * 100) / 100,
+    };
+  }
 }
