@@ -208,15 +208,68 @@ greengrass-backend/
 
 ## API Endpoints
 
----
+### Authentication Module - **FULLY OPERATIONAL** 🚀
 
-### Authentication
-- `POST /auth/register` – Đăng ký tài khoản sinh viên
-- `POST /auth/login` – Đăng nhập bằng email
-- `POST /auth/google` – Đăng nhập Google OAuth
-- `POST /auth/refresh` – Cấp lại access token
-- `POST /organizer/request` – request trở thành ban tổ chức
-- `POST /auth/logout` – Đăng xuất tài khoản
+**Complete Auth Flow** (JWT + Refresh + DB persist):
+1. **Register/Login**: DTO validate → bcrypt.compare/hash → Prisma `User.create/find` (email unique, STUDENT role) → `jwtService.sign(payload)`:
+   - Access: `{sub, email, role}` expires **15m** (`JWT_SECRET`)
+   - Refresh: **7d** (`JWT_REFRESH_SECRET`) → `prisma.user.update({refreshToken})`
+2. **Protected Request**: `Authorization: Bearer <access>` → `JwtAuthGuard` checks `@Public()` decorator (Reflector) → passport('jwt') → `JwtStrategy.validate()` → `req.user = payload`
+3. **Logout**: `JwtAuthGuard` pass → `prisma.user.update({refreshToken: null})`
+4. **Refresh**: Verify DB refreshToken → regenerate pair
+
+**DTO Validation** (class-validator):
+- `register.dto.ts`: `@IsEmail() email`, `@MinLength(6) password`, `fullName`
+- `login.dto.ts`: `@IsEmail() email`, `password`
+
+**Endpoints Table**:
+
+| Method | Endpoint | DTO/Body | Guard | Exceptions | Response |
+|--------|----------|----------|-------|------------|----------|
+| `POST` | `/auth/register` | `RegisterDto` | `@Public()` | BadRequest (email exists) | `{accessToken, refreshToken}` |
+| `POST` | `/auth/login` | `LoginDto` | `@Public()` | Unauthorized (invalid creds) | `{accessToken, refreshToken}` |
+| `POST` | `/auth/refresh` | `{userId, refreshToken}` | `@Public()` | Unauthorized (invalid refresh) | `{accessToken, refreshToken}` |
+| `POST` | `/auth/logout` | - | `JwtAuthGuard` | - | `{"message": "Logged out successfully"}` |
+| `POST` | `/auth/organizer/request` | `{email,fullName,password,organizationName,description}` | `@Public()` | Error (email exists) | `{"requestId": "...", "message": "Request submitted..."}` |
+
+**cURL Test Examples** (`yarn start:dev`, setup DB first):
+```bash
+# 1. Register
+curl -X POST localhost:3000/auth/register -H "Content-Type: application/json" -d '{"email":"student@test.com","fullName":"Student Test","password":"password123"}'
+
+# 2. Login
+curl -X POST localhost:3000/auth/login -H "Content-Type: application/json" -d '{"email":"student@test.com","password":"password123"}'
+
+# 3. Protected logout (use accessToken from step 2)
+curl -X POST localhost:3000/auth/logout -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+
+# Refresh example (use refreshToken from step 1/2)
+curl -X POST localhost:3000/auth/refresh -H "Content-Type: application/json" -d '{"userId":"uuid-from-token","refreshToken":"your_refresh_token"}'
+```
+
+**Core Implementation**:
+- **auth.service.ts**: All business logic (Prisma User/OrganizerRequest CRUD, bcrypt, jwtService)
+- **jwt.guard.ts**: `extends AuthGuard('jwt')` + `@Public()` Reflector bypass
+- **jwt.strategy.ts**: `PassportStrategy(Strategy)` extracts Bearer, `secretOrKey: process.env.JWT_SECRET`, `validate(payload)`
+- **common/decorators/public.decorater.ts**: `@SetMetadata(IS_PUBLIC_KEY, true)`
+- **Guards**: `JwtAuthGuard` global/app level protection
+
+**Env Required**:
+```
+JWT_SECRET=your-32char-secret
+JWT_REFRESH_SECRET=your-refresh-secret
+DATABASE_URL=postgresql://...
+```
+
+**Status**: Auth **100% working** after `yarn prisma migrate dev`. Test ngay!
+
+### Health Check
+`GET /` → `"Hello World!"` (app.controller.ts)
+
+### Health Check
+`GET /` → "Hello World!" (app.controller.ts)
+
+**Other modules**: WIP (chỉ `.module.ts`). Planned endpoints như README gốc.
 
 ---
 
