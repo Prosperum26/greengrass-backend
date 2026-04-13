@@ -1,0 +1,32 @@
+import {
+  Injectable,
+  ExecutionContext,
+} from "@nestjs/common";
+import { AuthGuard } from "@nestjs/passport";
+import { Reflector } from "@nestjs/core";
+import { IS_PUBLIC_KEY } from "src/common/decorators/public.decorater";
+
+@Injectable()
+export class JwtAuthGuard extends AuthGuard("jwt") {
+  constructor(private reflector: Reflector) {
+    super();
+  }
+
+  // Check route có @Public() hay không
+  canActivate(
+    context: ExecutionContext,
+  ): boolean | Promise<boolean> | any {
+    const isPublic = this.reflector.getAllAndOverride<boolean>(
+      IS_PUBLIC_KEY,
+      [context.getHandler(), context.getClass()],
+    );
+
+    // Public → bypass auth
+    if (isPublic) {
+      return true;
+    }
+
+    // Private → verify JWT
+    return super.canActivate(context);
+  }
+}
