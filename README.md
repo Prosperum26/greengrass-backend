@@ -244,7 +244,7 @@ Request → RolesGuard (kiểm tra role) → Controller (parse params/body) → 
 
 |    Role   |                                   Quyền hạn                                              |
 | --------- |         ------------------------------------------------------------                     |
-| `ORGANIZER| Tạo (`POST /events`), cập nhật (`PATCH /events/:id`), xóa sự kiện (`DELETE /events/:id`) |
+| `ORGANIZER`| Tạo (`POST /events`), cập nhật (`PATCH /events/:id`), xóa sự kiện (`DELETE /events/:id`) |
 | `STUDENT` | Đăng ký (`POST /events/:id/register`), hủy đăng ký (`DELETE /events/:id/register`)       |
 | Tất cả (không cần auth) | Xem danh sách, xem chi tiết, xem người tham dự |
 
