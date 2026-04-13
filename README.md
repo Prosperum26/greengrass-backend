@@ -243,6 +243,7 @@ Request → RolesGuard (kiểm tra role) → Controller (parse params/body) → 
 **Phân quyền theo role:**
 
 |    Role   |                                   Quyền hạn                                              |
+| --------- |         ------------------------------------------------------------                     |
 | `ORGANIZER| Tạo (`POST /events`), cập nhật (`PATCH /events/:id`), xóa sự kiện (`DELETE /events/:id`) |
 | `STUDENT` | Đăng ký (`POST /events/:id/register`), hủy đăng ký (`DELETE /events/:id/register`)       |
 | Tất cả (không cần auth) | Xem danh sách, xem chi tiết, xem người tham dự |
@@ -258,6 +259,7 @@ Request → RolesGuard (kiểm tra role) → Controller (parse params/body) → 
 **Sự kiện (CRUD)**
 
 | Method  |    Endpoint   |         Role      |                   Mô tả                                 |
+| ------  |   ---------   |    ------------   |       --------------------------------------            |
 | `GET`   | `/events`     |        Tất cả     | Danh sách sự kiện có filter, phân trang                 |
 | `GET`   | `/events/full`|        ADMIN      | Toàn bộ sự kiện có phân trang (dùng `page` & `limit`)   |
 | `POST`  | `/events`     |       ORGANIZER   | Tạo sự kiện mới                                         |
@@ -297,6 +299,7 @@ Request → RolesGuard (kiểm tra role) → Controller (parse params/body) → 
 **Đăng ký tham gia**
 
 |  Method  |           Endpoint         |   Role  |           Mô tả         |
+| -------  |    -------------------     |  -----  |    ------------------   |
 | `POST`   | `/events/:id/register`     | STUDENT | Đăng ký tham gia sự kiện|
 | `DELETE` | `/events/:id/register`     | STUDENT | Hủy đăng ký             |
 | `GET`    | `/events/:id/participants` | Tất cả  | Danh sách người tham dự |
