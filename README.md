@@ -208,6 +208,7 @@ greengrass-backend/
 ---
 
 ### Authentication
+
 - `POST /auth/register` – Đăng ký tài khoản sinh viên
 - `POST /auth/login` – Đăng nhập bằng email
 - `POST /auth/google` – Đăng nhập Google OAuth
@@ -216,6 +217,7 @@ greengrass-backend/
 ---
 
 ### Users
+
 - `GET /users/me` – Lấy thông tin tài khoản hiện tại
 - `PUT /users/me` – Cập nhật thông tin tài khoản
 - `GET /users/{id}/profile` – Xem profile public người dùng
@@ -226,6 +228,7 @@ greengrass-backend/
 ---
 
 ### Events
+
 - `GET /events` – Danh sách sự kiện (filter, search, sort)
 - `POST /events` – Tạo sự kiện (Organizer)
 - `GET /events/{id}` – Chi tiết sự kiện
@@ -233,6 +236,7 @@ greengrass-backend/
 ---
 
 ### Registration
+
 - `POST /events/{id}/register` – Đăng ký sự kiện
 - `DELETE /events/{id}/register` – Hủy đăng ký
 - `GET /events/{id}/participants` – Danh sách người tham gia
@@ -240,50 +244,100 @@ greengrass-backend/
 ---
 
 ### Check-in & Proof
-- `GET /events/{id}/qr` – Lấy QR check-in (Organizer)
-- `POST /events/{id}/check-in` – Check-in bằng QR + GPS
-- `POST /events/{id}/proof` – Gửi minh chứng hoạt động
-- `GET /events/{id}/proofs` – Danh sách proof chờ duyệt (Organizer)
-- `PUT /events/{id}/proofs/{userId}` – Duyệt / từ chối proof
+
+#### Endpoints đã hoàn thành
+
+| Method | Endpoint                      | Mô tả                                    | Role        |
+| ------ | ----------------------------- | ---------------------------------------- | ----------- |
+| `GET`  | `/events/{id}/qr`             | Lấy QR token động (rotate 30s)           | Organizer   |
+| `POST` | `/events/{id}/check-in`       | Check-in bằng QR + anti-cheat validation | Participant |
+| `GET`  | `/events/{id}/checked-in`     | Danh sách người đã check-in              | Organizer   |
+| `GET`  | `/events/{id}/check-in-stats` | Thống kê check-in rate                   | Organizer   |
+
+#### Cách hoạt động
+
+**1. QR Generation (Organizer)**
+
+- Token được tạo bằng SHA256: `hash(eventId + SECRET + timeWindow)`
+- `timeWindow` = Math.floor(timestamp / 30000) → token tự động thay đổi mỗi 30 giây
+- Chấp nhận tolerance: current window + previous window (tổng 60s)
+
+**2. Check-in Flow (Participant)**
+
+1. Verify event tồn tại & chưa COMPLETED
+2. Check user đã đăng ký sự kiện (EventRegistration)
+3. Check chưa check-in trước đó (status = REGISTERED)
+4. Verify QR token hợp lệ
+5. Update status → CHECKED_IN, lưu checkInTime
+6. Trigger stub award points
+7. Log kết quả `[CHECKIN] userId=... status=SUCCESS/FAIL reason=...`
+
+**3. Organizer Dashboard**
+
+- `/checked-in`: Trả về danh sách userId + checkInTime + status (CHECKED_IN/COMPLETED)
+- `/check-in-stats`: Trả về totalRegistered, checkedIn, completed, checkInRate (%)
+
+#### Environment Variables
+
+```env
+QR_SECRET=your-secret-key-here  # Bắt buộc cho production
+```
+
+#### Chưa làm (MVP Limitations)
+
+- [ ] `POST /events/{id}/proof` – Gửi minh chứng hoạt động (proof upload)
+- [ ] `GET /events/{id}/proofs` – Danh sách proof chờ duyệt
+- [ ] `PUT /events/{id}/proofs/{userId}` – Duyệt / từ chối proof
+- [ ] GPS validation trong check-in (chỉ check QR hiện tại)
+- [ ] Real-time QR update qua WebSocket (đang dùng polling)
+- [ ] Integration với GamificationModule để award points thật
+- [ ] Lấy userId từ JWT token (đang dùng placeholder)
 
 ---
 
 ### Gamification
+
 - `GET /badges` – Danh sách huy hiệu
 - `GET /leaderboard` – Bảng xếp hạng
 
 ---
 
 ### Organizations
+
 - `GET /organizations` – Danh sách CLB / tổ chức
 - `GET /organizations/{id}/dashboard` – Dashboard thống kê
 
 ---
 
 ### Export Data
+
 - `GET /events/{id}/export` – Xuất CSV/Excel danh sách hoàn thành
 - `POST /events/{id}/export/email` – Gửi file qua email
 
 ---
 
 ### Map & Eco System
+
 - `GET /map/eco-points` – Điểm sinh thái gần bạn
 - `GET /map/routes` – Gợi ý lộ trình di chuyển xanh
 
 ---
 
 ### AI Assistant
+
 - `POST /assistant/chat` – Chatbot hỗ trợ thông minh
 - `GET /assistant/recommendations` – Gợi ý sự kiện cá nhân hóa
 
 ---
 
 ### Notifications
+
 - `GET /notifications` – Lấy danh sách thông báo
 
 ---
 
 ### WebSocket Events
+
 - `notification:new` – Thông báo realtime (badge, points)
 - `event:stats_update` – Cập nhật dashboard organizer
 - `event:dynamic_qr` – QR code tự động refresh mỗi 60s
