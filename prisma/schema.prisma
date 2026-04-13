@@ -13,6 +13,19 @@ enum UserRole {
   ADMIN
 }
 
+enum UserStatus {
+  ACTIVE
+  PENDING
+  REJECTED
+  BANNED
+}
+
+enum OrgRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 enum EventStatus {
   UPCOMING
   ONGOING
@@ -32,19 +45,22 @@ enum ProofStatus {
 }
 
 model User {
-  id              String            @id @default(uuid())
-  email           String            @unique
-  fullName        String
-  password        String?
-  role            UserRole          @default(STUDENT)
-  
-  totalPoints     Int               @default(0)
-  currentStreak   Int               @default(0)
+  id       String   @id @default(uuid())
+  email    String   @unique
+  fullName String
+  password String?
+  role     UserRole @default(STUDENT)
 
-  refreshToken    String? 
+  totalPoints   Int @default(0)
+  currentStreak Int @default(0)
 
-  avatarUrl       String?
-  createdAt       DateTime          @default(now())
+  status       UserStatus @default(ACTIVE)
+  refreshToken String?
+
+  avatarUrl String?
+  createdAt DateTime @default(now())
+
+  organizerRequests OrganizerRequest[]
 
   eventRegistrations EventRegistration[]
   pointHistories     PointHistory[]
@@ -67,14 +83,29 @@ model Event {
   eventRegistrations EventRegistration[]
 }
 
+model OrganizerRequest {
+  id String @id @default(uuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  organizationName String
+  description      String?
+
+  status OrgRequestStatus @default(PENDING)
+
+  createdAt DateTime @default(now())
+}
+
 model EventRegistration {
   id          String             @id @default(uuid())
   userId      String
   eventId     String
   status      RegistrationStatus @default(REGISTERED)
-  checkInTime   DateTime?
+  checkInTime DateTime?
   proofUrl    String?
   proofStatus ProofStatus        @default(PENDING)
+  createdAt   DateTime           @default(now())
 
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
   event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
@@ -102,8 +133,8 @@ model Badge {
 }
 
 model UserBadge {
-  id     String @id @default(uuid())
-  userId String
+  id      String @id @default(uuid())
+  userId  String
   badgeId String
 
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
