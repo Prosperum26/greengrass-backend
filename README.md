@@ -146,6 +146,9 @@ greengrass-backend/
 │   ├── app.controller.ts   # Root controller - xử lý request chính
 │   ├── app.service.ts      # Root service - logic nghiệp vụ chính
 │   ├── app.controller.spec.ts  # Unit test cho app controller
+│   ├── modules/common      # Dùng chung cho toàn hệ thống
+│   ├── modules/config      # cấu hình hệ thống
+│   ├── modules/prisma      # liên kết với database
 │   └── modules/            # Các module chức năng
 │       ├── auth/           # Xác thực người dùng (login, register, JWT)
 │       ├── checkin/        # Chức năng check-in
@@ -213,6 +216,8 @@ greengrass-backend/
 - `POST /auth/login` – Đăng nhập bằng email
 - `POST /auth/google` – Đăng nhập Google OAuth
 - `POST /auth/refresh` – Cấp lại access token
+- `POST /organizer/request` – request trở thành ban tổ chức
+- `POST /auth/logout` – Đăng xuất tài khoản
 
 ---
 
@@ -562,7 +567,3 @@ mau deploy
 - [Jest Testing Framework](https://jestjs.io/)
 
 ---
-
-## License
-
-Dự án này sử dụng license UNLICENSED.
