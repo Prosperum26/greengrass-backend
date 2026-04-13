@@ -1,4 +1,5 @@
 import { IsNotEmpty, IsString, IsUUID } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
 
 /**
  * DTO for check-in request
@@ -7,9 +8,10 @@ export class CheckInDto {
   /**
    * The QR token for verification
    */
+  @ApiProperty({ description: 'QR token from event organizer', example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' })
   @IsString()
   @IsNotEmpty()
-  qrToken: string;
+  qrToken!: string;
 }
 
 /**
