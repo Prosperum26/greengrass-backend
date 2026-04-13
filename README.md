@@ -245,6 +245,12 @@ greengrass-backend/
 
 ### Check-in & Proof
 
+- `GET /events/{id}/qr` – Lấy QR check-in (Organizer)
+- `POST /events/{id}/check-in` – Check-in bằng QR + GPS
+- `POST /events/{id}/proof` – Gửi minh chứng hoạt động
+- `GET /events/{id}/proofs` – Danh sách proof chờ duyệt (Organizer)
+- `PUT /events/{id}/proofs/{userId}` – Duyệt / từ chối proof
+
 #### Endpoints đã hoàn thành
 
 | Method | Endpoint                      | Mô tả                                    | Role        |
@@ -295,10 +301,74 @@ QR_SECRET=your-secret-key-here  # Bắt buộc cho production
 
 ---
 
-### Gamification
+### Gamification (Hệ thống điểm thưởng)
 
-- `GET /badges` – Danh sách huy hiệu
-- `GET /leaderboard` – Bảng xếp hạng
+#### API Endpoints
+
+**User Stats & Points:**
+
+- `GET /points/me` – Thông tin điểm số và thống kê của user hiện tại
+- `GET /points/history` – Lịch sử giao dịch điểm (có phân trang)
+- `GET /points/rank` – Xếp hạng hiện tại của user
+- `GET /points/users/{userId}` – Xem stats public của user khác
+
+**Leaderboard:**
+
+- `GET /points/leaderboard?limit=50&offset=0&timeframe=all` – Bảng xếp hạng
+  - `timeframe`: `all` | `weekly` | `monthly`
+
+**Badges:**
+
+- `GET /points/badges` – Danh sách tất cả huy hiệu có thể đạt được
+- `GET /points/badges/me` – Huy hiệu đã đạt được của user
+
+**Admin/System:**
+
+- `POST /points/add` – Thêm điểm thủ công (admin)
+- `POST /points/check-badges` – Kiểm tra và trao huy hiệu
+- `POST /points/update-streak` – Cập nhật streak (tự động gọi khi có hoạt động)
+
+#### Cách module hoạt động
+
+**1. Point System (Hệ thống điểm):**
+
+- User nhận điểm khi: tham gia sự kiện (+10), check-in (+20), hoàn thành sự kiện (+50)
+- Mỗi giao dịch được ghi lại trong `PointHistory` để đảm bảo minh bạch
+- Tính năng **idempotency**: Ngăn chặn cấp điểm trùng lặp cho cùng một event/reason
+
+**2. Badge System (Hệ thống huy hiệu):**
+
+- Tự động trao huy hiệu khi user đạt ngưỡng điểm:
+  - `Green Beginner` – 100 points
+  - `Eco Enthusiast` – 250 points
+  - `Eco Warrior` – 500 points
+  - `Green Champion` – 1000 points
+  - `Earth Guardian` – 2500 points
+  - `Planet Savior` – 5000 points
+
+**3. Streak System (Chuỗi hoạt động):**
+
+- Tăng streak khi user có hoạt động liên tiếp các ngày
+- Reset về 1 nếu không hoạt động > 1 ngày
+- Thưởng +15 điểm mỗi khi đạt streak chia hết cho 7 (7, 14, 21...)
+
+**4. Leaderboard (Bảng xếp hạng):**
+
+- Sắp xếp theo `totalPoints` giảm dần
+- Hỗ trợ filter: `all-time`, `weekly`, `monthly` (dựa trên `lastActivityAt`)
+- Phân trang với `limit` và `offset`
+
+**5. Tích hợp với module khác:**
+
+```typescript
+// Ví dụ: Check-in module gọi gamification
+await this.gamificationService.addPoints({
+  userId,
+  reason: PointReason.CHECK_IN,
+  eventId: event.id,
+});
+await this.gamificationService.updateStreak(userId);
+```
 
 ---
 

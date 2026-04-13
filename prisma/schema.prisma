@@ -31,6 +31,15 @@ enum ProofStatus {
   REJECTED
 }
 
+enum PointReason {
+  JOIN_EVENT
+  CHECK_IN
+  COMPLETE_EVENT
+  STREAK_BONUS
+  REFERRAL
+  MANUAL_ADJUSTMENT
+}
+
 model User {
   id              String            @id @default(uuid())
   email           String            @unique
@@ -38,12 +47,16 @@ model User {
   role            UserRole          @default(STUDENT)
   totalPoints     Int               @default(0)
   currentStreak   Int               @default(0)
+  lastActivityAt  DateTime?
   avatarUrl       String?
   createdAt       DateTime          @default(now())
 
   eventRegistrations EventRegistration[]
   pointHistories     PointHistory[]
   userBadges         UserBadge[]
+
+  @@index([totalPoints])
+  @@index([lastActivityAt])
 }
 
 model Event {
@@ -78,31 +91,39 @@ model EventRegistration {
 }
 
 model PointHistory {
-  id        String   @id @default(uuid())
+  id        String      @id @default(uuid())
   userId    String
   amount    Int
-  reason    String
-  createdAt DateTime @default(now())
+  reason    PointReason
+  eventId   String?
+  metadata  Json?
+  createdAt DateTime    @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
 }
 
 model Badge {
-  id          String @id @default(uuid())
-  name        String
-  description String
-  iconUrl     String
+  id             String @id @default(uuid())
+  name           String @unique
+  description    String
+  iconUrl        String
+  pointThreshold Int
 
   userBadges UserBadge[]
 }
 
 model UserBadge {
-  id     String @id @default(uuid())
-  userId String
-  badgeId String
+  id        String   @id @default(uuid())
+  userId    String
+  badgeId   String
+  awardedAt DateTime @default(now())
 
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
   badge Badge @relation(fields: [badgeId], references: [id], onDelete: Cascade)
 
   @@unique([userId, badgeId])
+  @@index([userId])
 }
