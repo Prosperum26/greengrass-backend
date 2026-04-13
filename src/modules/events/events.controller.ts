@@ -7,14 +7,14 @@ import {
   HttpStatus,
   Param,
   Post,
-  Patch, 
+  Patch,
   Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
 import { Request } from 'express';
 import { Roles } from './decorators/roles.decorator';
-import { CreateEventDto, GetEventsQueryDto } from './dto/create-event.dto';
+import { CreateEventDto, GetEventsQueryDto, GetAllEventsQueryDto } from './dto/create-event.dto';
 import { RolesGuard } from './guards/roles.guard';
 import { EventsService } from './events.service';
 
@@ -41,9 +41,11 @@ export class EventsController {
     return ok(data);
   }
 
+  // FIX 1: giới hạn ADMIN + thêm phân trang
   @Get('full')
-  async getAllEvents() {
-    const data = await this.eventsService.getAllEvents();
+  @Roles('ADMIN')
+  async getAllEvents(@Query() query: GetAllEventsQueryDto) {
+    const data = await this.eventsService.getAllEvents(query);
     return ok(data);
   }
 
@@ -77,7 +79,7 @@ export class EventsController {
     return ok(data);
   }
 
- 
+
   @Delete(':id')
   @Roles('ORGANIZER')
   async deleteEvent(

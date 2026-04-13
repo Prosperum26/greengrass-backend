@@ -226,10 +226,107 @@ greengrass-backend/
 ---
 
 ### Events
-- `GET /events` – Danh sách sự kiện (filter, search, sort)
-- `POST /events` – Tạo sự kiện (Organizer)
-- `GET /events/{id}` – Chi tiết sự kiện
+Module Events quản lý toàn bộ vòng đời của sự kiện: tạo, tìm kiếm, đăng ký tham gia và quản lý người tham dự. Module được tổ chức gồm 6 file chính:
 
+|             File               |                               Vai trò                               |
+|       --------------------     |             ------------------------------------------              |
+| `events.module.ts`             | Khai báo module, import `PrismaModule`                              | 
+| `events.controller.ts`         | Định nghĩa routes, xử lý request/response, áp dụng `RolesGuard`     |
+| `events.service.ts`            | Chứa toàn bộ business logic và tương tác với database qua Prisma    |
+| `dto/create-event.dto.ts`      | Định nghĩa `CreateEventDto`,`GetEventsQueryDto`,                     `GetAllEventsQueryDto`, enum `EventStatus`|
+| `decorators/roles.decorator.ts`| Decorator `@Roles()` gắn metadata phân quyền lên route              |
+| `guards/roles.guard.ts`        | Guard kiểm tra `user.role` so với metadata từ `@Roles()`            |
+
+#### Luồng hoạt động
+Request → RolesGuard (kiểm tra role) → Controller (parse params/body) → Service (business logic) → Prisma → Database
+
+**Phân quyền theo role:**
+
+|    Role   |                                   Quyền hạn                                              |
+| `ORGANIZER| Tạo (`POST /events`), cập nhật (`PATCH /events/:id`), xóa sự kiện (`DELETE /events/:id`) |
+| `STUDENT` | Đăng ký (`POST /events/:id/register`), hủy đăng ký (`DELETE /events/:id/register`)       |
+| Tất cả (không cần auth) | Xem danh sách, xem chi tiết, xem người tham dự |
+
+**Tính năng đáng chú ý:**
+
+- **Dynamic status**: Trạng thái sự kiện (`UPCOMING` / `ONGOING` / `COMPLETED`) được tính toán động dựa trên `startTime` / `endTime` tại thời điểm query, không lưu cứng trong DB.
+- **`qrSecret` ẩn hoàn toàn**: Trường này không bao giờ xuất hiện trong response nhờ `EVENT_SELECT` constant dùng chung cho mọi query.
+- **Transaction Serializable**: Đăng ký sự kiện dùng `$transaction` với isolation level `Serializable` để tránh race condition khi nhiều user đăng ký cùng lúc.
+
+#### API Endpoints — Events
+
+**Sự kiện (CRUD)**
+
+| Method  |    Endpoint   |         Role      |                   Mô tả                                 |
+| `GET`   | `/events`     |        Tất cả     | Danh sách sự kiện có filter, phân trang                 |
+| `GET`   | `/events/full`|        ADMIN      | Toàn bộ sự kiện có phân trang (dùng `page` & `limit`)   |
+| `POST`  | `/events`     |       ORGANIZER   | Tạo sự kiện mới                                         |
+| `GET`   | `/events/:id` |        Tất cả     | Chi tiết một sự kiện                                    |
+| `PATCH` | `/events/:id` | ORGANIZER (owner) | Cập nhật sự kiện                                        |
+| `DELETE`| `/events/:id` | ORGANIZER (owner) | Xóa sự kiện                                             |
+
+**Query params cho `GET /events`:**
+
+|   Param   | Kiểu | Mô tả |
+|   -----   | ---- | ----- |
+| `status`  | `UPCOMING \| ONGOING \| COMPLETED` | Lọc theo trạng thái |
+| `keyword` | `string`          | Tìm kiếm theo `title`, `description`, `location` (case-insensitive) |
+| `dateFrom`| `ISO date string` | Lọc sự kiện bắt đầu từ ngày này |
+| `dateTo`  | `ISO date string` | Lọc sự kiện bắt đầu đến ngày này |
+| `page`    | `number` (default: `1`) | Trang hiện tại |
+| `limit`   | `number` (default: `10`, max: `100`) | Số bản ghi mỗi trang |
+
+**Body cho `POST /events` và `PATCH /events/:id`:**
+
+```json
+{
+  "title": "string (required)",
+  "description": "string (required)",
+  "location": "string (required)",
+  "latitude": "number [-90, 90] (required)",
+  "longitude": "number [-180, 180] (required)",
+  "startTime": "ISO date string (required)",
+  "endTime": "ISO date string (required)",
+  "points": "number >= 0 (required)",
+  "qrSecret": "string (required)"
+}
+```
+
+> `PATCH` chấp nhận bất kỳ trường nào ở trên ở dạng partial (không bắt buộc tất cả). Chỉ organizer tạo ra sự kiện mới được phép cập nhật / xóa.
+
+**Đăng ký tham gia**
+
+|  Method  |           Endpoint         |   Role  |           Mô tả         |
+| `POST`   | `/events/:id/register`     | STUDENT | Đăng ký tham gia sự kiện|
+| `DELETE` | `/events/:id/register`     | STUDENT | Hủy đăng ký             |
+| `GET`    | `/events/:id/participants` | Tất cả  | Danh sách người tham dự |
+
+**Ràng buộc nghiệp vụ:**
+- Không thể đăng ký hoặc hủy đăng ký sự kiện có status COMPLETED
+- Không thể đăng ký trùng (trả về 409 Conflict)
+- Chỉ organizer sở hữu sự kiện mới được cập nhật / xóa (trả về 400 nếu vi phạm)
+
+**Ví dụ response `GET /events`:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "items": [
+      {
+        "id": "clxyz...",
+        "title": "Trồng cây xanh tại Thủ Đức",
+        "status": "UPCOMING",
+        "startTime": "2025-06-01T08:00:00.000Z",
+        "endTime": "2025-06-01T12:00:00.000Z",
+        "points": 50,
+        "_count": { "eventRegistrations": 24 }
+      }
+    ],
+    "pagination": { "total": 120, "page": 1, "limit": 10 }
+  }
+}
+```
 ---
 
 ### Registration

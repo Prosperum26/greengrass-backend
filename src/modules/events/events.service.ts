@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { CreateEventDto, EventStatus, GetEventsQueryDto } from './dto/create-event.dto';
+import { CreateEventDto, EventStatus, GetEventsQueryDto, GetAllEventsQueryDto } from './dto/create-event.dto';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Shared Prisma select shapes
@@ -207,13 +207,24 @@ export class EventsService {
   }
 
   async cancelRegistration(eventId: string, userId: string) {
-    const eventExists = await this.prisma.event.findUnique({
+    const event = await this.prisma.event.findUnique({
       where:  { id: eventId },
-      select: { id: true },
+      // FIX 3: fetch startTime/endTime to check status
+      select: { id: true, startTime: true, endTime: true },
     });
 
-    if (!eventExists) {
+    if (!event) {
       throw new NotFoundException(`Event with id '${eventId}' not found.`);
+    }
+
+    // FIX 3: prevent cancellation after event has completed
+    const currentStatus = deriveStatus(
+      new Date(event.startTime),
+      new Date(event.endTime),
+    );
+
+    if (currentStatus === EventStatus.COMPLETED) {
+      throw new BadRequestException('Cannot cancel registration for a completed event.');
     }
 
     const registration = await this.prisma.eventRegistration.findUnique({
@@ -276,19 +287,32 @@ export class EventsService {
 
   // ───────────────── ADDITION (ONLY ADD BELOW) ─────────────────
 
-  async getAllEvents() {
-    const events = await this.prisma.event.findMany({
-      select: EVENT_SELECT,
-      orderBy: { startTime: 'asc' },
-    });
+  async getAllEvents(query: GetAllEventsQueryDto) {
+    const page  = query.page  ?? 1;
+    const limit = query.limit ?? 10;
+    const skip  = (page - 1) * limit;
 
-    return events.map(withDynamicStatus);
+    const [total, rawItems] = await Promise.all([
+      this.prisma.event.count(),
+      this.prisma.event.findMany({
+        select:  EVENT_SELECT,
+        orderBy: { startTime: 'asc' },
+        skip,
+        take: limit,
+      }),
+    ]);
+
+    return {
+      items:      rawItems.map(withDynamicStatus),
+      pagination: { total, page, limit },
+    };
   }
 
   async updateEvent(id: string, dto: Partial<CreateEventDto>, userId: string) {
     const event = await this.prisma.event.findUnique({
       where: { id },
-      select: { organizerId: true },
+      // FIX 4: also fetch startTime/endTime to recompute status after update
+      select: { organizerId: true, startTime: true, endTime: true },
     });
 
     if (!event) {
@@ -299,12 +323,24 @@ export class EventsService {
       throw new BadRequestException('You are not allowed to update this event.');
     }
 
+    // FIX 2: validate startTime < endTime, handling partial patch
+    const newStartTime = dto.startTime ? new Date(dto.startTime) : new Date(event.startTime);
+    const newEndTime   = dto.endTime   ? new Date(dto.endTime)   : new Date(event.endTime);
+
+    if (newStartTime >= newEndTime) {
+      throw new BadRequestException('startTime must be strictly before endTime.');
+    }
+
+    // FIX 4: recompute and persist status so DB stays in sync
+    const newStatus = deriveStatus(newStartTime, newEndTime);
+
     const updated = await this.prisma.event.update({
       where: { id },
       data: {
         ...dto,
-        ...(dto.startTime && { startTime: new Date(dto.startTime) }),
-        ...(dto.endTime && { endTime: new Date(dto.endTime) }),
+        ...(dto.startTime && { startTime: newStartTime }),
+        ...(dto.endTime   && { endTime:   newEndTime }),
+        status: newStatus,
       },
       select: EVENT_SELECT,
     });
