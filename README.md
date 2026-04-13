@@ -31,6 +31,7 @@ Dự án bao gồm các chức năng chính:
 
 - **Node.js**: phiên bản 18.x hoặc cao hơn
 - **Yarn**: package manager (đã cấu hình trong dự án)
+- **PostgreSQL**: database (Prisma 6+ compatible)
 - **TypeScript**: ngôn ngữ chính của dự án
 
 ---
