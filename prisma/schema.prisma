@@ -74,6 +74,9 @@ model User {
   eventRegistrations EventRegistration[]
   pointHistories     PointHistory[]
   userBadges         UserBadge[]
+  
+  // THÊM: Mối quan hệ User làm người tổ chức sự kiện
+  organizedEvents    Event[]    @relation("EventOrganizer")
 
   @@index([totalPoints])
   @@index([lastActivityAt])
@@ -92,7 +95,27 @@ model Event {
   qrSecret    String
   status      EventStatus @default(UPCOMING)
 
+  // THÊM: Cột lưu ID người tổ chức
+  organizerId String
+  organizer   User        @relation("EventOrganizer", fields: [organizerId], references: [id])
+
   eventRegistrations EventRegistration[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model OrganizerRequest {
+  id String @id @default(uuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  organizationName String
+  description      String?
+
+  status OrgRequestStatus @default(PENDING)
+
+  createdAt DateTime @default(now())
 }
 
 model OrganizerRequest {
@@ -117,6 +140,8 @@ model EventRegistration {
   checkInTime DateTime?
   proofUrl    String?
   proofStatus ProofStatus        @default(PENDING)
+  
+  // THÊM: Cột lưu thời gian đăng ký
   createdAt   DateTime           @default(now())
 
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)

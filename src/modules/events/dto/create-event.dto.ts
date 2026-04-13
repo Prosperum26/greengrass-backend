@@ -83,12 +83,28 @@ export class GetEventsQueryDto {
   @Transform(({ value }) => parseInt(value, 10))
   @IsInt()
   @Min(1)
-  page: number = 1; // Đã gán giá trị mặc định nên không cần !
+  page: number = 1;
 
   @IsOptional()
   @Transform(({ value }) => parseInt(value, 10))
   @IsInt()
   @Min(1)
   @Max(100)
-  limit: number = 10; // Đã gán giá trị mặc định
+  limit: number = 10;
+}
+
+/** Dùng riêng cho GET /events/full (chỉ ADMIN) — phân trang đơn giản, không filter */
+export class GetAllEventsQueryDto {
+  @IsOptional()
+  @Transform(({ value }) => parseInt(value, 10))
+  @IsInt()
+  @Min(1)
+  page: number = 1;
+
+  @IsOptional()
+  @Transform(({ value }) => parseInt(value, 10))
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  limit: number = 10;
 }
