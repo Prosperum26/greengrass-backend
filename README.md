@@ -208,6 +208,7 @@ greengrass-backend/
 ---
 
 ### Authentication
+
 - `POST /auth/register` – Đăng ký tài khoản sinh viên
 - `POST /auth/login` – Đăng nhập bằng email
 - `POST /auth/google` – Đăng nhập Google OAuth
@@ -216,6 +217,7 @@ greengrass-backend/
 ---
 
 ### Users
+
 - `GET /users/me` – Lấy thông tin tài khoản hiện tại
 - `PUT /users/me` – Cập nhật thông tin tài khoản
 - `GET /users/{id}/profile` – Xem profile public người dùng
@@ -226,6 +228,7 @@ greengrass-backend/
 ---
 
 ### Events
+
 - `GET /events` – Danh sách sự kiện (filter, search, sort)
 - `POST /events` – Tạo sự kiện (Organizer)
 - `GET /events/{id}` – Chi tiết sự kiện
@@ -233,6 +236,7 @@ greengrass-backend/
 ---
 
 ### Registration
+
 - `POST /events/{id}/register` – Đăng ký sự kiện
 - `DELETE /events/{id}/register` – Hủy đăng ký
 - `GET /events/{id}/participants` – Danh sách người tham gia
@@ -240,6 +244,7 @@ greengrass-backend/
 ---
 
 ### Check-in & Proof
+
 - `GET /events/{id}/qr` – Lấy QR check-in (Organizer)
 - `POST /events/{id}/check-in` – Check-in bằng QR + GPS
 - `POST /events/{id}/proof` – Gửi minh chứng hoạt động
@@ -248,42 +253,113 @@ greengrass-backend/
 
 ---
 
-### Gamification
-- `GET /badges` – Danh sách huy hiệu
-- `GET /leaderboard` – Bảng xếp hạng
+### Gamification (Hệ thống điểm thưởng)
+
+#### API Endpoints
+
+**User Stats & Points:**
+
+- `GET /points/me` – Thông tin điểm số và thống kê của user hiện tại
+- `GET /points/history` – Lịch sử giao dịch điểm (có phân trang)
+- `GET /points/rank` – Xếp hạng hiện tại của user
+- `GET /points/users/{userId}` – Xem stats public của user khác
+
+**Leaderboard:**
+
+- `GET /points/leaderboard?limit=50&offset=0&timeframe=all` – Bảng xếp hạng
+  - `timeframe`: `all` | `weekly` | `monthly`
+
+**Badges:**
+
+- `GET /points/badges` – Danh sách tất cả huy hiệu có thể đạt được
+- `GET /points/badges/me` – Huy hiệu đã đạt được của user
+
+**Admin/System:**
+
+- `POST /points/add` – Thêm điểm thủ công (admin)
+- `POST /points/check-badges` – Kiểm tra và trao huy hiệu
+- `POST /points/update-streak` – Cập nhật streak (tự động gọi khi có hoạt động)
+
+#### Cách module hoạt động
+
+**1. Point System (Hệ thống điểm):**
+
+- User nhận điểm khi: tham gia sự kiện (+10), check-in (+20), hoàn thành sự kiện (+50)
+- Mỗi giao dịch được ghi lại trong `PointHistory` để đảm bảo minh bạch
+- Tính năng **idempotency**: Ngăn chặn cấp điểm trùng lặp cho cùng một event/reason
+
+**2. Badge System (Hệ thống huy hiệu):**
+
+- Tự động trao huy hiệu khi user đạt ngưỡng điểm:
+  - `Green Beginner` – 100 points
+  - `Eco Enthusiast` – 250 points
+  - `Eco Warrior` – 500 points
+  - `Green Champion` – 1000 points
+  - `Earth Guardian` – 2500 points
+  - `Planet Savior` – 5000 points
+
+**3. Streak System (Chuỗi hoạt động):**
+
+- Tăng streak khi user có hoạt động liên tiếp các ngày
+- Reset về 1 nếu không hoạt động > 1 ngày
+- Thưởng +15 điểm mỗi khi đạt streak chia hết cho 7 (7, 14, 21...)
+
+**4. Leaderboard (Bảng xếp hạng):**
+
+- Sắp xếp theo `totalPoints` giảm dần
+- Hỗ trợ filter: `all-time`, `weekly`, `monthly` (dựa trên `lastActivityAt`)
+- Phân trang với `limit` và `offset`
+
+**5. Tích hợp với module khác:**
+
+```typescript
+// Ví dụ: Check-in module gọi gamification
+await this.gamificationService.addPoints({
+  userId,
+  reason: PointReason.CHECK_IN,
+  eventId: event.id,
+});
+await this.gamificationService.updateStreak(userId);
+```
 
 ---
 
 ### Organizations
+
 - `GET /organizations` – Danh sách CLB / tổ chức
 - `GET /organizations/{id}/dashboard` – Dashboard thống kê
 
 ---
 
 ### Export Data
+
 - `GET /events/{id}/export` – Xuất CSV/Excel danh sách hoàn thành
 - `POST /events/{id}/export/email` – Gửi file qua email
 
 ---
 
 ### Map & Eco System
+
 - `GET /map/eco-points` – Điểm sinh thái gần bạn
 - `GET /map/routes` – Gợi ý lộ trình di chuyển xanh
 
 ---
 
 ### AI Assistant
+
 - `POST /assistant/chat` – Chatbot hỗ trợ thông minh
 - `GET /assistant/recommendations` – Gợi ý sự kiện cá nhân hóa
 
 ---
 
 ### Notifications
+
 - `GET /notifications` – Lấy danh sách thông báo
 
 ---
 
 ### WebSocket Events
+
 - `notification:new` – Thông báo realtime (badge, points)
 - `event:stats_update` – Cập nhật dashboard organizer
 - `event:dynamic_qr` – QR code tự động refresh mỗi 60s
