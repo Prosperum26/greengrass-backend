@@ -5,7 +5,9 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { GamificationService } from '../gamification/gamification.service';
 import { CreateEventDto, EventStatus, GetEventsQueryDto, GetAllEventsQueryDto } from './dto/create-event.dto';
+import { PointReason } from '@prisma/client';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Shared Prisma select shapes
@@ -66,7 +68,10 @@ function withDynamicStatus<T extends RawEvent>(event: T): T {
 
 @Injectable()
 export class EventsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly gamificationService: GamificationService,
+  ) {}
 
   async getEvents(query: GetEventsQueryDto) {
     const page  = query.page  ?? 1;
@@ -153,11 +158,11 @@ export class EventsService {
   }
 
   async registerToEvent(eventId: string, userId: string) {
-    return this.prisma.$transaction(
+    const result = await this.prisma.$transaction(
       async (tx) => {
         const event = await tx.event.findUnique({
-          where:  { id: eventId },
-          select: { id: true, title: true, startTime: true, endTime: true },
+          where: { id: eventId },
+          select: { id: true, title: true, startTime: true, endTime: true, points: true },
         });
 
         if (!event) {
@@ -174,7 +179,7 @@ export class EventsService {
         }
 
         const existing = await tx.eventRegistration.findUnique({
-          where:  { userId_eventId: { userId, eventId } },
+          where: { userId_eventId: { userId, eventId } },
           select: { id: true },
         });
 
@@ -182,7 +187,7 @@ export class EventsService {
           throw new ConflictException('You have already registered for this event.');
         }
 
-        return tx.eventRegistration.create({
+        const registration = await tx.eventRegistration.create({
           data: { userId, eventId },
           select: {
             id:        true,
@@ -196,14 +201,27 @@ export class EventsService {
                 startTime: true,
                 endTime:   true,
                 status:    true,
+                points:    true,
               },
             },
             user: { select: USER_SELECT },
           },
         });
+
+        return { registration, eventPoints: event.points };
       },
       { isolationLevel: 'Serializable' },
     );
+
+    // Add points for joining event (outside transaction)
+    await this.gamificationService.addPoints({
+      userId,
+      amount: result.eventPoints,
+      reason: PointReason.JOIN_EVENT,
+      eventId,
+    });
+
+    return result.registration;
   }
 
   async cancelRegistration(eventId: string, userId: string) {

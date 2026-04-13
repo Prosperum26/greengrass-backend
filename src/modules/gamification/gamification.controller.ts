@@ -5,15 +5,30 @@ import {
   Body,
   Query,
   Param,
+  Req,
   HttpCode,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import { GamificationService } from './gamification.service';
 import { AddPointsDto } from './dto/add-points.dto';
 import { LeaderboardQueryDto } from './dto/leaderboard-query.dto';
 import { PaginationDto } from './dto/pagination.dto';
+import { JwtAuthGuard } from '../../common/guards/jwt.guard';
+import { Roles } from '../events/decorators/roles.decorator';
+import { RolesGuard } from '../events/guards/roles.guard';
+import { Public } from '../../common/decorators/public.decorater';
+
+interface RequestWithUser extends Request {
+  user: {
+    sub: string;
+    email: string;
+    role: string;
+  };
+}
 
 @Controller('points')
+@UseGuards(JwtAuthGuard)
 export class GamificationController {
   constructor(private readonly gamificationService: GamificationService) {}
 
@@ -22,8 +37,8 @@ export class GamificationController {
    * GET /points/me
    */
   @Get('me')
-  async getMyPoints(@Query('userId') userId: string) {
-    return this.gamificationService.getUserStats(userId);
+  async getMyPoints(@Req() req: RequestWithUser) {
+    return this.gamificationService.getUserStats(req.user.sub);
   }
 
   /**
@@ -32,16 +47,17 @@ export class GamificationController {
    */
   @Get('history')
   async getPointHistory(
-    @Query('userId') userId: string,
+    @Req() req: RequestWithUser,
     @Query() pagination: PaginationDto,
   ) {
-    return this.gamificationService.getPointHistory(userId, pagination);
+    return this.gamificationService.getPointHistory(req.user.sub, pagination);
   }
 
   /**
    * Get leaderboard
    * GET /points/leaderboard
    */
+  @Public()
   @Get('leaderboard')
   async getLeaderboard(@Query() filters: LeaderboardQueryDto) {
     return this.gamificationService.getLeaderboard(filters);
@@ -51,6 +67,7 @@ export class GamificationController {
    * Get all available badges
    * GET /points/badges
    */
+  @Public()
   @Get('badges')
   async getAllBadges() {
     return this.gamificationService.getAllBadges();
@@ -61,8 +78,8 @@ export class GamificationController {
    * GET /points/badges/me
    */
   @Get('badges/me')
-  async getMyBadges(@Query('userId') userId: string) {
-    return this.gamificationService.getUserBadges(userId);
+  async getMyBadges(@Req() req: RequestWithUser) {
+    return this.gamificationService.getUserBadges(req.user.sub);
   }
 
   /**
@@ -70,9 +87,9 @@ export class GamificationController {
    * GET /points/rank
    */
   @Get('rank')
-  async getUserRank(@Query('userId') userId: string) {
-    const rank = await this.gamificationService.getUserRank(userId);
-    return { userId, rank };
+  async getUserRank(@Req() req: RequestWithUser) {
+    const rank = await this.gamificationService.getUserRank(req.user.sub);
+    return { userId: req.user.sub, rank };
   }
 
   /**
@@ -80,6 +97,8 @@ export class GamificationController {
    * POST /points/add
    */
   @Post('add')
+  @Roles('ADMIN')
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @HttpCode(HttpStatus.OK)
   async addPoints(@Body() dto: AddPointsDto) {
     return this.gamificationService.addPoints(dto);
@@ -91,8 +110,8 @@ export class GamificationController {
    */
   @Post('check-badges')
   @HttpCode(HttpStatus.OK)
-  async checkBadges(@Body('userId') userId: string) {
-    await this.gamificationService.checkAndAssignBadges(userId);
+  async checkBadges(@Req() req: RequestWithUser) {
+    await this.gamificationService.checkAndAssignBadges(req.user.sub);
     return { success: true, message: 'Badge check completed' };
   }
 
@@ -102,15 +121,16 @@ export class GamificationController {
    */
   @Post('update-streak')
   @HttpCode(HttpStatus.OK)
-  async updateStreak(@Body('userId') userId: string) {
-    const streak = await this.gamificationService.updateStreak(userId);
-    return { userId, currentStreak: streak };
+  async updateStreak(@Req() req: RequestWithUser) {
+    const streak = await this.gamificationService.updateStreak(req.user.sub);
+    return { userId: req.user.sub, currentStreak: streak };
   }
 
   /**
    * Get user stats by ID (for public profiles)
    * GET /points/users/:userId
    */
+  @Public()
   @Get('users/:userId')
   async getUserStats(@Param('userId') userId: string) {
     return this.gamificationService.getUserStats(userId);

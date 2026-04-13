@@ -5,11 +5,12 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { GamificationService } from '../gamification/gamification.service';
 import { QrUtil } from './utils/qr.util';
 import { CheckInLogger } from './logs/checkin.logger';
 import { CheckInFailReason } from './constants/checkin.constants';
 import { CheckInResponseDto, QrResponseDto } from './dto/checkin.dto';
-import { EventStatus, RegistrationStatus } from '@prisma/client';
+import { EventStatus, RegistrationStatus, PointReason } from '@prisma/client';
 
 /**
  * Service for handling check-in operations
@@ -20,7 +21,10 @@ export class CheckinService {
   private readonly logger = new CheckInLogger();
   private readonly qrSecret: string;
 
-  constructor(private readonly prisma: PrismaService) {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly gamificationService: GamificationService,
+  ) {
     this.qrSecret =
       process.env.QR_SECRET || 'default-secret-change-in-production';
   }
@@ -141,8 +145,14 @@ export class CheckinService {
       },
     });
 
-    // Step 6: Call stub for adding points
-    this.addPoints(userId, eventId, event.points);
+    // Step 6: Add points and update streak via gamification service
+    await this.gamificationService.addPoints({
+      userId,
+      amount: event.points,
+      reason: PointReason.CHECK_IN,
+      eventId,
+    });
+    await this.gamificationService.updateStreak(userId);
 
     // Step 7: Log success
     this.logger.logSuccess(userId, eventId);
@@ -154,23 +164,6 @@ export class CheckinService {
       checkInTime: updatedRegistration.checkInTime ?? undefined,
       pointsAwarded: event.points,
     };
-  }
-
-  /**
-   * Stub function for adding points to user
-   * TODO: Implement actual point awarding logic with gamification service
-   *
-   * @param userId - The user ID
-   * @param eventId - The event ID
-   * @param points - Points to award
-   */
-  private addPoints(userId: string, eventId: string, points: number): void {
-    // TODO: Implement point awarding logic
-    // This should integrate with gamification service
-    // For now, just log the intent
-    console.log(
-      `[POINTS_STUB] Would add ${points} points to user ${userId} for event ${eventId}`,
-    );
   }
 
   /**

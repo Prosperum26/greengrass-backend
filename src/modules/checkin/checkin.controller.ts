@@ -4,9 +4,11 @@ import {
   Get,
   Body,
   Param,
+  Req,
   UsePipes,
   ValidationPipe,
   ParseUUIDPipe,
+  UseGuards,
 } from '@nestjs/common';
 import { CheckinService } from './checkin.service';
 import {
@@ -14,12 +16,24 @@ import {
   CheckInResponseDto,
   QrResponseDto,
 } from './dto/checkin.dto';
+import { JwtAuthGuard } from '../../common/guards/jwt.guard';
+import { Roles } from '../events/decorators/roles.decorator';
+import { RolesGuard } from '../events/guards/roles.guard';
+
+interface RequestWithUser extends Request {
+  user: {
+    sub: string;
+    email: string;
+    role: string;
+  };
+}
 
 /**
  * Controller for check-in operations
  * Handles QR generation and check-in processing
  */
 @Controller('events')
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class CheckinController {
   constructor(private readonly checkinService: CheckinService) {}
 
@@ -31,6 +45,7 @@ export class CheckinController {
    * @returns QR token response
    */
   @Get(':eventId/qr')
+  @Roles('ORGANIZER')
   async getQrToken(
     @Param('eventId', ParseUUIDPipe) eventId: string,
   ): Promise<QrResponseDto> {
@@ -45,15 +60,14 @@ export class CheckinController {
    * @returns Check-in response
    */
   @Post(':eventId/check-in')
+  @Roles('STUDENT')
   @UsePipes(new ValidationPipe({ transform: true }))
   async checkIn(
     @Param('eventId', ParseUUIDPipe) eventId: string,
     @Body() checkInDto: CheckInDto,
+    @Req() req: RequestWithUser,
   ): Promise<CheckInResponseDto> {
-    // TODO: Get userId from authenticated user (JWT token)
-    // For now, using a placeholder - this should come from JWT guard
-    const userId = 'temp-user-id'; // Replace with actual user from JWT
-
+    const userId = req.user.sub;
     return this.checkinService.checkIn(userId, eventId, checkInDto.qrToken);
   }
 
@@ -65,6 +79,7 @@ export class CheckinController {
    * @returns List of checked-in participants
    */
   @Get(':eventId/checked-in')
+  @Roles('ORGANIZER')
   async getCheckedInParticipants(
     @Param('eventId', ParseUUIDPipe) eventId: string,
   ): Promise<Array<{ userId: string; checkInTime: Date; status: string }>> {
@@ -79,6 +94,7 @@ export class CheckinController {
    * @returns Check-in statistics
    */
   @Get(':eventId/check-in-stats')
+  @Roles('ORGANIZER')
   async getCheckInStats(
     @Param('eventId', ParseUUIDPipe) eventId: string,
   ): Promise<{

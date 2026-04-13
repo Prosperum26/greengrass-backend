@@ -277,18 +277,42 @@ DATABASE_URL=postgresql://...
 
 `GET /` → "Hello World!" (app.controller.ts)
 
-**Other modules**: WIP (chỉ `.module.ts`). Planned endpoints như README gốc.
+**Implementation Status:**
+
+- ✅ **Auth** — Fully operational (JWT + Refresh Token)
+- ✅ **Users** — Fully implemented
+- ✅ **Events** — Fully implemented (CRUD + Registration)
+- ✅ **Checkin** — Fully implemented (QR + Integration with Gamification)
+- ✅ **Gamification** — Fully implemented (Points + Badges + Leaderboard)
+- ⚠️ **Registrations/Leaderboard/Map/Forum/Notifications** — Not implemented (stubs only)
 
 ---
 
-### Users
+### Users — **FULLY IMPLEMENTED** ✅
 
-- `GET /users/me` – Lấy thông tin tài khoản hiện tại
-- `PUT /users/me` – Cập nhật thông tin tài khoản
-- `GET /users/{id}/profile` – Xem profile public người dùng
-- `GET /users/me/events` – Lịch sử sự kiện đã tham gia
-- `GET /users/me/points` – Tổng quan điểm số
-- `GET /users/me/streak` – Chuỗi hoạt động xanh
+Module Users cung cấp API quản lý thông tin người dùng.
+
+**Base Path:** `/users`
+
+**Authentication:** Tất cả endpoints (trừ `/users/:id/profile`) yêu cầu JWT token trong header `Authorization: Bearer {token}`
+
+| Method  | Endpoint             | Auth   | Description                      | Request                         | Response                               |
+| ------- | -------------------- | ------ | -------------------------------- | ------------------------------- | -------------------------------------- |
+| `GET`   | `/users/me`          | JWT    | Lấy thông tin tài khoản hiện tại | -                               | User object                            |
+| `PATCH` | `/users/me`          | JWT    | Cập nhật thông tin tài khoản     | `{fullName?, avatarUrl?, bio?}` | Updated user                           |
+| `GET`   | `/users/:id/profile` | Public | Xem profile public người dùng    | -                               | Public user profile                    |
+| `GET`   | `/users/me/events`   | JWT    | Lịch sử sự kiện đã tham gia      | -                               | List of registrations                  |
+| `GET`   | `/users/me/points`   | JWT    | Tổng quan điểm số và badges      | -                               | `{totalPoints, currentStreak, badges}` |
+
+**Update User DTO:**
+
+```json
+{
+  "fullName": "string (optional, max 100 chars)",
+  "avatarUrl": "string (optional, max 500 chars)",
+  "bio": "string (optional, max 1000 chars)"
+}
+```
 
 ---
 
@@ -620,10 +644,169 @@ mau deploy
 
 ---
 
+## Frontend Integration Guide
+
+### Authentication Flow
+
+```
+1. POST /auth/register hoặc /auth/login
+2. Lưu accessToken (15 phút) và refreshToken (7 ngày) vào localStorage/sessionStorage
+3. Gửi accessToken trong header: Authorization: Bearer {token}
+4. Khi 401 Unauthorized → POST /auth/refresh để lấy token mới
+5. POST /auth/logout khi đăng xuất
+```
+
+### Role-based Access
+
+| Role        | Permissions                                           |
+| ----------- | ----------------------------------------------------- |
+| `STUDENT`   | Register events, check-in, view points/badges         |
+| `ORGANIZER` | Create/update/delete events, view QR, view stats      |
+| `ADMIN`     | View all events (`/events/full`), add points manually |
+
+### Public vs Protected Endpoints
+
+```javascript
+// Public - không cần token
+GET /                     // Health check
+GET /events               // List events
+GET /events/:id          // Event detail
+GET /events/:id/participants  // View participants
+GET /users/:id/profile   // Public user profile
+GET /points/leaderboard  // Leaderboard
+GET /points/badges       // All badges
+GET /points/users/:userId // Public user stats
+
+// Protected - cần JWT token
+Tất cả endpoints còn lại
+```
+
+### Example API Calls (JavaScript/TypeScript)
+
+```typescript
+// 1. Register
+const register = async (email: string, fullName: string, password: string) => {
+  const res = await fetch('/auth/register', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, fullName, password }),
+  });
+  return res.json(); // { accessToken, refreshToken }
+};
+
+// 2. Login
+const login = async (email: string, password: string) => {
+  const res = await fetch('/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+  const data = await res.json();
+  localStorage.setItem('accessToken', data.accessToken);
+  localStorage.setItem('refreshToken', data.refreshToken);
+  return data;
+};
+
+// 3. Authenticated request
+const getMyProfile = async () => {
+  const token = localStorage.getItem('accessToken');
+  const res = await fetch('/users/me', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (res.status === 401) {
+    // Token expired → refresh
+    await refreshToken();
+    return getMyProfile(); // Retry
+  }
+  return res.json();
+};
+
+// 4. Refresh token
+const refreshToken = async () => {
+  const refreshToken = localStorage.getItem('refreshToken');
+  // Need userId from JWT payload (decode client-side or store after login)
+  const userId = getUserIdFromToken();
+  const res = await fetch('/auth/refresh', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userId, refreshToken }),
+  });
+  const data = await res.json();
+  localStorage.setItem('accessToken', data.accessToken);
+  localStorage.setItem('refreshToken', data.refreshToken);
+  return data;
+};
+
+// 5. Register for event (STUDENT only)
+const registerForEvent = async (eventId: string) => {
+  const token = localStorage.getItem('accessToken');
+  const res = await fetch(`/events/${eventId}/register`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return res.json();
+};
+
+// 6. Check-in (STUDENT only)
+const checkIn = async (eventId: string, qrToken: string) => {
+  const token = localStorage.getItem('accessToken');
+  const res = await fetch(`/events/${eventId}/check-in`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ qrToken }),
+  });
+  return res.json();
+};
+
+// 7. Get QR token (ORGANIZER only)
+const getQrToken = async (eventId: string) => {
+  const token = localStorage.getItem('accessToken');
+  const res = await fetch(`/events/${eventId}/qr`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return res.json(); // { eventId, qrToken, generatedAt, expiresAt }
+};
+```
+
+### JWT Token Structure
+
+```typescript
+// Decode JWT to get payload
+interface JWTPayload {
+  sub: string; // userId
+  email: string;
+  role: 'STUDENT' | 'ORGANIZER' | 'ADMIN';
+  iat: number; // issued at
+  exp: number; // expiration
+}
+
+const decodeJWT = (token: string): JWTPayload => {
+  const base64 = token.split('.')[1];
+  return JSON.parse(atob(base64));
+};
+```
+
+### Error Handling
+
+| Status | Meaning      | Action                                              |
+| ------ | ------------ | --------------------------------------------------- |
+| 400    | Bad Request  | Validation error → show field errors                |
+| 401    | Unauthorized | Token expired → refresh token                       |
+| 403    | Forbidden    | Wrong role → show access denied                     |
+| 404    | Not Found    | Resource not found → show error message             |
+| 409    | Conflict     | Duplicate (e.g., already registered) → show message |
+| 500    | Server Error | Retry or contact admin                              |
+
+---
+
 ## Tài liệu tham khảo
 
 - [NestJS Documentation](https://docs.nestjs.com)
 - [TypeScript Handbook](https://www.typescriptlang.org/docs/)
 - [Jest Testing Framework](https://jestjs.io/)
+- [Prisma Documentation](https://www.prisma.io/docs)
 
 ---
