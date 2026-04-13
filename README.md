@@ -29,9 +29,10 @@ Dự án bao gồm các chức năng chính:
 
 ## Yêu cầu hệ thống
 
-- **Node.js**: phiên bản 18.x hoặc cao hơn
-- **Yarn**: package manager (đã cấu hình trong dự án)
-- **TypeScript**: ngôn ngữ chính của dự án
+- **Node.js** ≥ 18.x
+- **Yarn** v1.x (uses yarn.lock)
+- **PostgreSQL** (Prisma 6+ compatible)
+- **TypeScript** 5.x
 
 ---
 
@@ -50,7 +51,7 @@ cd greengrass-backend
 ### 2. Cài đặt dependencies
 
 ```bash
-# Cài đặn tất cả các gói phụ thuộc bằng yarn (đã bao gồm Prisma)
+# Cài đặt tất cả dependencies (incl. Prisma 6+)
 yarn install
 ```
 
@@ -147,16 +148,16 @@ greengrass-backend/
 │   ├── app.service.ts      # Root service - logic nghiệp vụ chính
 │   ├── app.controller.spec.ts  # Unit test cho app controller
 │   └── modules/            # Các module chức năng
-│       ├── auth/           # Xác thực người dùng (login, register, JWT)
-│       ├── checkin/        # Chức năng check-in
+│       ├── auth/           # Xác thực & phân quyền (JWT, Google OAuth, Roles)
+│       ├── checkin/        # Check-in sự kiện (QR, GPS)
 │       ├── events/         # Quản lý sự kiện
 │       ├── forum/          # Diễn đàn thảo luận
-│       ├── gamification/   # Hệ thống điểm thưởng, badge
-│       ├── leaderboard/    # Bảng xếp hạng
-│       ├── map/            # Tích hợp bản đồ
-│       ├── notifications/  # Hệ thống thông báo
-│       ├── registrations/  # Đăng ký tham gia sự kiện
-│       └── users/          # Quản lý người dùng
+│       ├── gamification/   # Hệ thống điểm thưởng & huy hiệu
+│       ├── leaderboard/    # Bảng xếp hạng người dùng
+│       ├── map/            # Tích hợp bản đồ & điểm sinh thái
+│       ├── notifications/  # Push notifications realtime
+│       ├── registrations/  # Đăng ký/hủy tham gia sự kiện
+│       └── users/          # Profile & thông tin người dùng
 ├── test/                   # End-to-end tests
 │   ├── app.e2e-spec.ts     # E2E test cho toàn bộ ứng dụng
 │   └── jest-e2e.json       # Cấu hình Jest cho e2e tests
@@ -207,86 +208,101 @@ greengrass-backend/
 
 ---
 
-### Authentication
-- `POST /auth/register` – Đăng ký tài khoản sinh viên
-- `POST /auth/login` – Đăng nhập bằng email
-- `POST /auth/google` – Đăng nhập Google OAuth
-- `POST /auth/refresh` – Cấp lại access token
+### Authentication (Auth Module)
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| POST | `/auth/register` | Đăng ký tài khoản sinh viên | Public |
+| POST | `/auth/login` | Đăng nhập bằng email/password | Public |
+| POST | `/auth/google` | Đăng nhập Google OAuth | Public |
+| POST | `/auth/refresh` | Cấp lại access token | Refresh Token |
+
+### Users Module
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| GET | `/users/me` | Lấy thông tin tài khoản hiện tại | JWT |
+| PUT | `/users/me` | Cập nhật profile cá nhân | JWT |
+| GET | `/users/{id}/profile` | Xem profile public | Public |
+| GET | `/users/me/events` | Lịch sử sự kiện tham gia | JWT |
+| GET | `/users/me/points` | Tổng quan điểm số & streak | JWT |
+
+### Events Module
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| GET | `/events` | Danh sách sự kiện (filter/paginate) | Public |
+| POST | `/events` | Tạo sự kiện mới | Organizer |
+| GET | `/events/{id}` | Chi tiết sự kiện | Public |
+| PUT | `/events/{id}` | Cập nhật sự kiện | Organizer |
+
+### Registrations Module
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| POST | `/events/{id}/register` | Đăng ký tham gia | Student |
+| DELETE | `/events/{id}/register` | Hủy đăng ký | Student |
+| GET | `/events/{id}/participants` | Danh sách người tham gia | Organizer |
+
+### Check-in Module
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| GET | `/events/{id}/qr` | Tạo QR code check-in | Organizer |
+| POST | `/events/{id}/check-in` | Check-in (QR + GPS) | Student |
+| POST | `/events/{id}/proof` | Submit proof hoàn thành | Student |
+| GET | `/events/{id}/proofs` | Danh sách proofs chờ duyệt | Organizer |
+| PUT | `/events/{id}/proofs/{userId}` | Duyệt/từ chối proof | Organizer |
+
+### Gamification & Leaderboard
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| GET | `/badges` | Danh sách huy hiệu | Public |
+| GET | `/leaderboard` | Bảng xếp hạng top users | Public |
+| GET | `/gamification/user/{id}` | Stats cá nhân (points, badges) | Public |
+
+### Other Modules (Forum, Map, Notifications, Events*, Users*, etc.)
+**Current Status**: Most modules have basic `.module.ts` setup (WIP - controllers/services pending implementation). Auth is fully implemented.
+
+| Module | Status | Planned Endpoints |
+|--------|--------|-------------------|
+| **Events** | Setup | `/events`, `/events/{id}` |
+| **Users** | Setup | `/users/me`, `/users/profile` |
+| **Forum** | Setup | `/forum/posts`, `/forum/categories` |
+| **Map** | Setup | `/map/eco-points`, `/map/routes` |
+| **Notifications** | Setup | `/notifications` |
+| **Gamification/Leaderboard/Checkin/Registrations** | Setup | Module-specific CRUD |
+
+**Note**: Full API docs via Swagger at `/api` once controllers implemented. Current: Auth + App health check.
 
 ---
 
-### Users
-- `GET /users/me` – Lấy thông tin tài khoản hiện tại
-- `PUT /users/me` – Cập nhật thông tin tài khoản
-- `GET /users/{id}/profile` – Xem profile public người dùng
-- `GET /users/me/events` – Lịch sử sự kiện đã tham gia
-- `GET /users/me/points` – Tổng quan điểm số
-- `GET /users/me/streak` – Chuỗi hoạt động xanh
+## Environment Variables
 
----
+Tạo file `.env` dựa trên `.env.example`:
 
-### Events
-- `GET /events` – Danh sách sự kiện (filter, search, sort)
-- `POST /events` – Tạo sự kiện (Organizer)
-- `GET /events/{id}` – Chi tiết sự kiện
+| Variable | Description | Default | Required |
+|----------|-------------|---------|----------|
+| `PORT` | Server port | 3000 | No |
+| `DATABASE_URL` | Prisma PostgreSQL connection | - | **Yes** |
+| `JWT_SECRET` | JWT signing key | - | **Yes** |
+| `JWT_EXPIRES` | Access token expiry | 15m | No |
+| `REFRESH_SECRET` | Refresh token key | - | **Yes** |
+| `GOOGLE_CLIENT_ID` | Google OAuth Client ID | - | If using Google login |
+| `FRONTEND_URL` | Allowed CORS origin | http://localhost:3000 | No |
 
----
-
-### Registration
-- `POST /events/{id}/register` – Đăng ký sự kiện
-- `DELETE /events/{id}/register` – Hủy đăng ký
-- `GET /events/{id}/participants` – Danh sách người tham gia
-
----
-
-### Check-in & Proof
-- `GET /events/{id}/qr` – Lấy QR check-in (Organizer)
-- `POST /events/{id}/check-in` – Check-in bằng QR + GPS
-- `POST /events/{id}/proof` – Gửi minh chứng hoạt động
-- `GET /events/{id}/proofs` – Danh sách proof chờ duyệt (Organizer)
-- `PUT /events/{id}/proofs/{userId}` – Duyệt / từ chối proof
-
----
-
-### Gamification
-- `GET /badges` – Danh sách huy hiệu
-- `GET /leaderboard` – Bảng xếp hạng
-
----
-
-### Organizations
-- `GET /organizations` – Danh sách CLB / tổ chức
-- `GET /organizations/{id}/dashboard` – Dashboard thống kê
-
----
-
-### Export Data
-- `GET /events/{id}/export` – Xuất CSV/Excel danh sách hoàn thành
-- `POST /events/{id}/export/email` – Gửi file qua email
-
----
-
-### Map & Eco System
-- `GET /map/eco-points` – Điểm sinh thái gần bạn
-- `GET /map/routes` – Gợi ý lộ trình di chuyển xanh
-
----
-
-### AI Assistant
-- `POST /assistant/chat` – Chatbot hỗ trợ thông minh
-- `GET /assistant/recommendations` – Gợi ý sự kiện cá nhân hóa
-
----
-
-### Notifications
-- `GET /notifications` – Lấy danh sách thông báo
+**Example `.env`**:
+```env
+PORT=3000
+DATABASE_URL="postgresql://user:pass@localhost:5432/greengrass"
+JWT_SECRET="your-super-secret-jwt-key-here-min32-chars"
+JWT_EXPIRES=15m
+REFRESH_SECRET="your-refresh-secret-here"
+GOOGLE_CLIENT_ID="your-google-client-id.googleusercontent.com"
+FRONTEND_URL="http://localhost:3001"
+```
 
 ---
 
 ### WebSocket Events
-- `notification:new` – Thông báo realtime (badge, points)
-- `event:stats_update` – Cập nhật dashboard organizer
-- `event:dynamic_qr` – QR code tự động refresh mỗi 60s
+- `notification:new` – Realtime notifications (new badge, points)
+- `event:stats_update` – Live dashboard updates for organizers
+- `event:dynamic_qr` – Dynamic QR refresh every 60s
 
 ---
 
@@ -295,6 +311,10 @@ greengrass-backend/
 ```http
 Authorization: Bearer <access_token>
 ```
+
+**Headers**:
+- `X-Device-ID` (optional): Device fingerprinting
+- `User-Agent`: Client identification
 
 ---
 
