@@ -12,6 +12,7 @@ import { MapModule } from './modules/map/map.module';
 import { ForumModule } from './modules/forum/forum.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { PrismaModule } from './modules/prisma/prisma.module';
+import { AdminModule } from './modules/admin/admin.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { PrismaModule } from './modules/prisma/prisma.module';
     MapModule,
     ForumModule,
     NotificationsModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [AppService],
