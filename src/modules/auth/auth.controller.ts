@@ -5,6 +5,7 @@ import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { OrganizerRequestDto } from './dto/organizer-request.dto';
 import { JwtAuthGuard } from 'src/common/guards/jwt.guard';
 
 @ApiTags('Authentication')
@@ -64,7 +65,7 @@ export class AuthController {
   })
   @Public()
   @Post('organizer/request')
-  requestOrg(@Body() dto: unknown) {
+  requestOrg(@Body() dto: OrganizerRequestDto) {
     return this.authService.requestOrganizer(dto);
   }
 }

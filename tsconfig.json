@@ -28,7 +28,8 @@
     "dist",
     "test",
     "**/*.spec.ts",
-    "prisma.config.ts"
+    "prisma.config.ts",
+    "prisma"
   ]
 }
 

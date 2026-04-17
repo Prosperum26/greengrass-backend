@@ -564,6 +564,73 @@ await this.gamificationService.updateStreak(userId);
 
 ---
 
+### Admin — **ORGANIZER REQUEST MANAGEMENT** ✅
+
+Module Admin cung cấp API để quản lý và duyệt các yêu cầu trở thành Organizer. **Chỉ ADMIN role** mới có quyền truy cập.
+
+**Base Path:** `/admin`
+
+**Authentication:** JWT token bắt buộc + Role `ADMIN`
+
+#### API Endpoints
+
+| Method | Endpoint                                | Auth        | Description                             | Query/Body                        | Response                         |
+| ------ | --------------------------------------- | ----------- | --------------------------------------- | --------------------------------- | -------------------------------- |
+| `GET`  | `/admin/organizer-requests`             | ADMIN + JWT | Danh sách tất cả requests               | `?page=1&limit=10&status=PENDING` | List with pagination             |
+| `GET`  | `/admin/organizer-requests/:id`         | ADMIN + JWT | Chi tiết 1 request                      | -                                 | Request detail                   |
+| `POST` | `/admin/organizer-requests/:id/approve` | ADMIN + JWT | Duyệt request, upgrade user → ORGANIZER | -                                 | `{ message, requestId, status }` |
+| `POST` | `/admin/organizer-requests/:id/reject`  | ADMIN + JWT | Từ chối request                         | `{ reason?: string }`             | `{ message, requestId, status }` |
+
+#### Query Params cho `GET /admin/organizer-requests`
+
+| Param    | Type                                  | Mô tả                              |
+| -------- | ------------------------------------- | ---------------------------------- |
+| `page`   | number                                | Trang hiện tại (default: 1)        |
+| `limit`  | number                                | Số bản ghi mỗi trang (default: 10) |
+| `status` | `PENDING` \| `APPROVED` \| `REJECTED` | Lọc theo trạng thái                |
+
+#### Response Example (Request Detail)
+
+```json
+{
+  "id": "clxyz123...",
+  "userId": "user-uuid...",
+  "fullName": "Nguyen Van A",
+  "email": "nguyenvana@example.com",
+  "organizationName": "CLB Môi trường Xanh",
+  "description": "Tổ chức hoạt động vì môi trường tại trường",
+  "status": "PENDING",
+  "createdAt": "2026-04-16T10:30:00.000Z"
+}
+```
+
+#### Admin Account Setup
+
+Chạy seeder để tạo admin account mặc định:
+
+```bash
+# Cách 1: Yarn script
+yarn seed
+
+# Cách 2: Prisma CLI
+npx prisma db seed
+```
+
+**Default admin credentials:**
+
+- Email: `admin@greengrass.com`
+- Password: `admin123`
+
+Có thể override qua environment variables:
+
+```env
+ADMIN_EMAIL=your-admin@example.com
+ADMIN_PASSWORD=your-secure-password
+ADMIN_FULL_NAME=Your Admin Name
+```
+
+---
+
 ### Organizations
 
 - `GET /organizations` – Danh sách CLB / tổ chức
@@ -649,20 +716,45 @@ mau deploy
 ### Authentication Flow
 
 ```
-1. POST /auth/register hoặc /auth/login
+1. POST /auth/register hoặc /auth/login (Admin dùng chung endpoint /auth/login)
 2. Lưu accessToken (15 phút) và refreshToken (7 ngày) vào localStorage/sessionStorage
 3. Gửi accessToken trong header: Authorization: Bearer {token}
 4. Khi 401 Unauthorized → POST /auth/refresh để lấy token mới
 5. POST /auth/logout khi đăng xuất
 ```
 
+**Admin Login:**
+
+- Admin đăng nhập qua endpoint **`POST /auth/login`** giống như user thường
+- Sau khi login thành công, JWT token sẽ chứa `role: "ADMIN"`
+- Dùng token này để gọi các admin-only endpoints
+
+**Example Admin Login:**
+
+```typescript
+const adminLogin = async () => {
+  const res = await fetch('/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email: 'admin@greengrass.com', // default admin
+      password: 'admin123',
+    }),
+  });
+  const data = await res.json();
+  // data = { accessToken, refreshToken }
+  // Decode JWT để kiểm tra role === 'ADMIN'
+  return data;
+};
+```
+
 ### Role-based Access
 
-| Role        | Permissions                                           |
-| ----------- | ----------------------------------------------------- |
-| `STUDENT`   | Register events, check-in, view points/badges         |
-| `ORGANIZER` | Create/update/delete events, view QR, view stats      |
-| `ADMIN`     | View all events (`/events/full`), add points manually |
+| Role        | Permissions                                                                               |
+| ----------- | ----------------------------------------------------------------------------------------- |
+| `STUDENT`   | Register events, check-in, view points/badges                                             |
+| `ORGANIZER` | Create/update/delete events, view QR, view stats                                          |
+| `ADMIN`     | View all events (`/events/full`), manage organizer requests (`/admin/organizer-requests`) |
 
 ### Public vs Protected Endpoints
 
@@ -768,6 +860,58 @@ const getQrToken = async (eventId: string) => {
     headers: { Authorization: `Bearer ${token}` },
   });
   return res.json(); // { eventId, qrToken, generatedAt, expiresAt }
+};
+
+// 8. Admin: Get organizer requests list (ADMIN only)
+const getOrganizerRequests = async (
+  page = 1,
+  limit = 10,
+  status?: 'PENDING' | 'APPROVED' | 'REJECTED',
+) => {
+  const token = localStorage.getItem('accessToken');
+  const query = new URLSearchParams({
+    page: String(page),
+    limit: String(limit),
+  });
+  if (status) query.append('status', status);
+
+  const res = await fetch(`/admin/organizer-requests?${query}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return res.json(); // { items: [...], pagination: {...} }
+};
+
+// 9. Admin: Get organizer request detail (ADMIN only)
+const getOrganizerRequestDetail = async (requestId: string) => {
+  const token = localStorage.getItem('accessToken');
+  const res = await fetch(`/admin/organizer-requests/${requestId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return res.json(); // Full request detail with user info
+};
+
+// 10. Admin: Approve organizer request (ADMIN only)
+const approveOrganizerRequest = async (requestId: string) => {
+  const token = localStorage.getItem('accessToken');
+  const res = await fetch(`/admin/organizer-requests/${requestId}/approve`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return res.json(); // { message, requestId, status: 'APPROVED' }
+};
+
+// 11. Admin: Reject organizer request (ADMIN only)
+const rejectOrganizerRequest = async (requestId: string, reason?: string) => {
+  const token = localStorage.getItem('accessToken');
+  const res = await fetch(`/admin/organizer-requests/${requestId}/reject`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ reason }), // reason is optional
+  });
+  return res.json(); // { message, requestId, status: 'REJECTED' }
 };
 ```
 
