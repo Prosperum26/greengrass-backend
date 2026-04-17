@@ -14,26 +14,25 @@ import {
 } from '@nestjs/common';
 import { Request } from 'express';
 import { Roles } from './decorators/roles.decorator';
-import { CreateEventDto, GetEventsQueryDto, GetAllEventsQueryDto } from './dto/create-event.dto';
+import {
+  CreateEventDto,
+  GetEventsQueryDto,
+  GetAllEventsQueryDto,
+} from './dto/create-event.dto';
 import { RolesGuard } from './guards/roles.guard';
 import { EventsService } from './events.service';
-
+import { JwtAuthGuard } from '../../common/guards/jwt.guard';
 
 interface AuthRequest extends Request {
-  user: { id: string; role: 'STUDENT' | 'ORGANIZER' | 'ADMIN' };
+  user: { sub: string; role: 'STUDENT' | 'ORGANIZER' | 'ADMIN' };
 }
-
-
 
 const ok = <T>(data: T) => ({ success: true as const, data });
 
-
-
 @Controller('events')
-@UseGuards(RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class EventsController {
   constructor(private readonly eventsService: EventsService) {}
-
 
   @Get()
   async getEvents(@Query() query: GetEventsQueryDto) {
@@ -53,7 +52,7 @@ export class EventsController {
   @Roles('ORGANIZER')
   @HttpCode(HttpStatus.CREATED)
   async createEvent(@Body() dto: CreateEventDto, @Req() req: AuthRequest) {
-    const data = await this.eventsService.createEvent(dto, req.user.id);
+    const data = await this.eventsService.createEvent(dto, req.user.sub);
     return ok(data);
   }
 
@@ -63,7 +62,6 @@ export class EventsController {
     return ok(data);
   }
 
-
   @Patch(':id')
   @Roles('ORGANIZER')
   async updateEvent(
@@ -71,34 +69,25 @@ export class EventsController {
     @Body() dto: Partial<CreateEventDto>,
     @Req() req: AuthRequest,
   ) {
-    const data = await this.eventsService.updateEvent(
-      id,
-      dto,
-      req.user.id,
-    );
+    const data = await this.eventsService.updateEvent(id, dto, req.user.sub);
     return ok(data);
   }
-
 
   @Delete(':id')
   @Roles('ORGANIZER')
-  async deleteEvent(
-    @Param('id') id: string,
-    @Req() req: AuthRequest,
-  ) {
-    const data = await this.eventsService.deleteEvent(
-      id,
-      req.user.id,
-    );
+  async deleteEvent(@Param('id') id: string, @Req() req: AuthRequest) {
+    const data = await this.eventsService.deleteEvent(id, req.user.sub);
     return ok(data);
   }
-
 
   @Post(':id/register')
   @Roles('STUDENT')
   @HttpCode(HttpStatus.CREATED)
   async register(@Param('id') eventId: string, @Req() req: AuthRequest) {
-    const data = await this.eventsService.registerToEvent(eventId, req.user.id);
+    const data = await this.eventsService.registerToEvent(
+      eventId,
+      req.user.sub,
+    );
     return ok(data);
   }
 
@@ -109,7 +98,10 @@ export class EventsController {
     @Param('id') eventId: string,
     @Req() req: AuthRequest,
   ) {
-    const data = await this.eventsService.cancelRegistration(eventId, req.user.id);
+    const data = await this.eventsService.cancelRegistration(
+      eventId,
+      req.user.sub,
+    );
     return ok(data);
   }
 

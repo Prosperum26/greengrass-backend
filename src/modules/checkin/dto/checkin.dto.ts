@@ -8,7 +8,10 @@ export class CheckInDto {
   /**
    * The QR token for verification
    */
-  @ApiProperty({ description: 'QR token from event organizer', example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' })
+  @ApiProperty({
+    description: 'QR token from event organizer',
+    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+  })
   @IsString()
   @IsNotEmpty()
   qrToken!: string;

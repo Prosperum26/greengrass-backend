@@ -222,7 +222,9 @@ export class GamificationService {
   /**
    * Get leaderboard with optional filtering
    */
-  async getLeaderboard(filters: LeaderboardFilters): Promise<LeaderboardEntry[]> {
+  async getLeaderboard(
+    filters: LeaderboardFilters,
+  ): Promise<LeaderboardEntry[]> {
     const { limit = 50, offset = 0, timeframe = 'all' } = filters;
 
     let whereClause: Prisma.UserWhereInput = {};
@@ -398,7 +400,11 @@ export class GamificationService {
     });
 
     // Award streak bonus if streak milestone reached
-    if (newStreak > 0 && newStreak % 7 === 0 && newStreak !== user.currentStreak) {
+    if (
+      newStreak > 0 &&
+      newStreak % 7 === 0 &&
+      newStreak !== user.currentStreak
+    ) {
       await this.addPoints({
         userId,
         amount: this.POINT_VALUES[PointReason.STREAK_BONUS],

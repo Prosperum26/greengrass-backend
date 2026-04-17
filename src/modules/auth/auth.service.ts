@@ -1,15 +1,19 @@
-import { Injectable, UnauthorizedException, BadRequestException } from "@nestjs/common";
-import { PrismaService } from "src/prisma/prisma.service";
-import * as bcrypt from "bcrypt";
-import { JwtService } from "@nestjs/jwt";
-import { OAuth2Client } from "google-auth-library";
+import {
+  Injectable,
+  UnauthorizedException,
+  BadRequestException,
+} from '@nestjs/common';
+import { PrismaService } from 'src/prisma/prisma.service';
+import * as bcrypt from 'bcrypt';
+import { JwtService } from '@nestjs/jwt';
+import { OAuth2Client } from 'google-auth-library';
 
 @Injectable()
 export class AuthService {
   private googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
   constructor(
     private prisma: PrismaService,
-    private jwtService: JwtService
+    private jwtService: JwtService,
   ) {}
 
   // ========================
@@ -21,7 +25,7 @@ export class AuthService {
       where: { email },
     });
 
-    if (userExist) throw new BadRequestException("Email already exists");
+    if (userExist) throw new BadRequestException('Email already exists');
 
     // Băm passworld
     const hash = await bcrypt.hash(password, 10);
@@ -37,7 +41,7 @@ export class AuthService {
       },
     });
 
-    return this.generateToken(user.id);
+    return this.generateToken(user);
   }
 
   // ========================
@@ -49,12 +53,12 @@ export class AuthService {
       where: { email },
     });
 
-    if (!user) throw new UnauthorizedException("Invalid credentials");
+    if (!user) throw new UnauthorizedException('Invalid credentials');
 
     // so sánh password
-    const isMatch = await bcrypt.compare(password, user.password || "");
+    const isMatch = await bcrypt.compare(password, user.password || '');
 
-    if (!isMatch) throw new UnauthorizedException("Invalid credentials");
+    if (!isMatch) throw new UnauthorizedException('Invalid credentials');
 
     return this.generateToken(user);
   }
@@ -68,9 +72,8 @@ export class AuthService {
       data: { refreshToken: null },
     });
 
-    return { message: "Logged out successfully" };
+    return { message: 'Logged out successfully' };
   }
-
 
   // ========================
   // GOOGLE LOGIN
@@ -87,7 +90,7 @@ export class AuthService {
 
     // Không có email → lỗi
     if (!payload?.email) {
-      throw new UnauthorizedException("Invalid Google account");
+      throw new UnauthorizedException('Invalid Google account');
     }
 
     // Tìm user theo email
@@ -100,16 +103,15 @@ export class AuthService {
       user = await this.prisma.user.create({
         data: {
           email: payload.email,
-          fullName: payload.name || "Google User",
+          fullName: payload.name || 'Google User',
           password: null,
-          role: "STUDENT",
+          role: 'STUDENT',
         },
       });
     }
 
     return this.generateToken(user);
   }
-
 
   // ========================
   // JWT GENERATOR
@@ -125,13 +127,13 @@ export class AuthService {
     // access token
     const accessToken = this.jwtService.sign(payload, {
       secret: process.env.JWT_SECRET,
-      expiresIn: "15m",
+      expiresIn: '15m',
     });
 
     // refresh token
     const refreshToken = this.jwtService.sign(payload, {
       secret: process.env.JWT_REFRESH_SECRET,
-      expiresIn: "7d",
+      expiresIn: '7d',
     });
 
     await this.prisma.user.update({
@@ -156,23 +158,22 @@ export class AuthService {
 
     // check token hợp lệ
     if (!user || user.refreshToken !== refreshToken) {
-      throw new UnauthorizedException("Invalid refresh token");
+      throw new UnauthorizedException('Invalid refresh token');
     }
 
     return this.generateToken(user);
   }
 
-
-// ========================
-// ORGANIZER REQUEST
-// ========================
+  // ========================
+  // ORGANIZER REQUEST
+  // ========================
   async requestOrganizer(dto: any) {
     // request làm organizer
     const { email, fullName, password, organizationName, description } = dto;
 
     const exist = await this.prisma.user.findUnique({ where: { email } });
 
-    if (exist) throw new Error("Email already exists");
+    if (exist) throw new BadRequestException('Email already exists');
 
     const hash = await bcrypt.hash(password, 10);
 
@@ -191,12 +192,12 @@ export class AuthService {
         userId: user.id,
         organizationName,
         description,
-        status: "PENDING",
+        status: 'PENDING',
       },
     });
 
     return {
-      message: "Request submitted, waiting for admin approval",
+      message: 'Request submitted, waiting for admin approval',
       requestId: request.id,
     };
   }

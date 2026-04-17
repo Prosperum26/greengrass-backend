@@ -35,7 +35,8 @@ export class AdminController {
   @Get('organizer-requests')
   @ApiOperation({
     summary: 'Get all organizer requests',
-    description: 'Retrieve list of all organizer requests with pagination and optional status filter (Admin only)',
+    description:
+      'Retrieve list of all organizer requests with pagination and optional status filter (Admin only)',
   })
   @ApiQuery({
     name: 'page',
@@ -62,17 +63,14 @@ export class AdminController {
   ): Promise<OrganizerRequestListResponseDto> {
     const pageNum = page ? parseInt(page, 10) : 1;
     const limitNum = limit ? parseInt(limit, 10) : 10;
-    return this.adminService.getOrganizerRequests(
-      pageNum,
-      limitNum,
-      status,
-    );
+    return this.adminService.getOrganizerRequests(pageNum, limitNum, status);
   }
 
   @Get('organizer-requests/:id')
   @ApiOperation({
     summary: 'Get organizer request detail',
-    description: 'Retrieve full details of a specific organizer request by ID (Admin only)',
+    description:
+      'Retrieve full details of a specific organizer request by ID (Admin only)',
   })
   async getOrganizerRequestById(
     @Param('id') requestId: string,
@@ -83,7 +81,8 @@ export class AdminController {
   @Post('organizer-requests/:id/approve')
   @ApiOperation({
     summary: 'Approve organizer request',
-    description: 'Approve a pending organizer request and upgrade user role to ORGANIZER (Admin only)',
+    description:
+      'Approve a pending organizer request and upgrade user role to ORGANIZER (Admin only)',
   })
   async approveOrganizerRequest(
     @Param('id') requestId: string,
@@ -94,7 +93,8 @@ export class AdminController {
   @Post('organizer-requests/:id/reject')
   @ApiOperation({
     summary: 'Reject organizer request',
-    description: 'Reject a pending organizer request with optional reason (Admin only)',
+    description:
+      'Reject a pending organizer request with optional reason (Admin only)',
   })
   async rejectOrganizerRequest(
     @Param('id') requestId: string,
