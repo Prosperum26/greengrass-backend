@@ -6,16 +6,33 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { ConfigService } from '@nestjs/config';
+import { WinstonModule } from 'nest-winston';
 import { GlobalExceptionFilter } from './common/filters';
+import { createWinstonConfig } from './common/logger/logger.config';
+import { CorrelationMiddleware } from './common/correlation/correlation.middleware';
+import { RequestLoggingInterceptor } from './common/interceptors/request-logging.interceptor';
+import { CorrelationService } from './common/correlation/correlation.service';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  // Create app with Winston logger for structured logging
+  const app = await NestFactory.create(AppModule, {
+    logger: WinstonModule.createLogger(createWinstonConfig()),
+  });
+
   const configService = app.get(ConfigService);
   const logger = new Logger('Bootstrap');
+  const correlationService = app.get(CorrelationService);
 
   // Get environment configuration
   const nodeEnv = configService.get<string>('NODE_ENV') ?? 'development';
   const port = configService.get<number>('PORT') ?? 3000;
+
+  // Observability: Correlation ID tracking (must be before other middleware)
+  app.use(
+    new CorrelationMiddleware(correlationService).use.bind(
+      new CorrelationMiddleware(correlationService),
+    ),
+  );
 
   // Security: Helmet middleware for HTTP headers
   app.use(
@@ -121,6 +138,9 @@ async function bootstrap() {
 
   // Global exception filter for consistent error responses
   app.useGlobalFilters(new GlobalExceptionFilter());
+
+  // Observability: Request/Response logging interceptor
+  app.useGlobalInterceptors(new RequestLoggingInterceptor(correlationService));
 
   await app.listen(port);
   logger.log(`Application is running on: ${await app.getUrl()}`);

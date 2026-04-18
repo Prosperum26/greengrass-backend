@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { WinstonModule } from 'nest-winston';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './modules/auth/auth.module';
@@ -16,10 +17,16 @@ import { PrismaModule } from './modules/prisma/prisma.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { UploadModule } from './modules/upload/upload.module';
 import { ChatbotModule } from './modules/chatbot/chatbot.module';
+import { CorrelationModule } from './common/correlation/correlation.module';
+import { createWinstonConfig } from './common/logger/logger.config';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    // Observability: Winston logger for structured logging
+    WinstonModule.forRoot(createWinstonConfig()),
+    // Observability: Correlation ID tracking
+    CorrelationModule,
     PrismaModule,
     UploadModule,
     AuthModule,
