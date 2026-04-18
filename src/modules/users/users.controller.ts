@@ -16,7 +16,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { UsersService } from './users.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt.guard';
-import { Public } from '../../common/decorators/public.decorater';
+import { Public } from '../../common/decorators/public.decorator';
 import {
   imageFileFilter,
   MAX_FILE_SIZE,

@@ -10,7 +10,7 @@ import {
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { ChatbotService, ChatMessageDto, ChatResponse } from './chatbot.service';
 import { JwtAuthGuard } from '../../common/guards/jwt.guard';
-import { Public } from '../../common/decorators/public.decorater';
+import { Public } from '../../common/decorators/public.decorator';
 
 @ApiTags('AI Assistant')
 @Controller('assistant')

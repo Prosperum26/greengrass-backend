@@ -3,6 +3,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { CheckinService } from '../checkin.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { QrUtil } from '../utils/qr.util';
+import { GamificationService } from '../../gamification/gamification.service';
+import { ConfigService } from '@nestjs/config';
 import {
   NotFoundException,
   ConflictException,
@@ -63,10 +65,21 @@ describe('CheckinService', () => {
     $connect: jest.fn(),
     $disconnect: jest.fn(),
   };
+  const mockGamificationService = {
+    addPoints: jest.fn(),
+    updateStreak: jest.fn(),
+  };
+  const mockConfigService = {
+    get: jest.fn(),
+  };
 
   beforeEach(async () => {
     // Set environment variable for tests
     process.env.QR_SECRET = mockQrSecret;
+    mockConfigService.get.mockImplementation((key: string) => {
+      if (key === 'QR_SECRET') return mockQrSecret;
+      return undefined;
+    });
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -75,6 +88,14 @@ describe('CheckinService', () => {
           provide: PrismaService,
           useValue: mockPrismaService,
         },
+        {
+          provide: GamificationService,
+          useValue: mockGamificationService,
+        },
+        {
+          provide: ConfigService,
+          useValue: mockConfigService,
+        },
       ],
     }).compile();
 
@@ -82,6 +103,8 @@ describe('CheckinService', () => {
 
     // Reset mocks
     jest.clearAllMocks();
+    mockGamificationService.addPoints.mockResolvedValue(undefined);
+    mockGamificationService.updateStreak.mockResolvedValue(1);
   });
 
   afterEach(() => {

@@ -111,6 +111,10 @@ model Event {
   notifications      Notification[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@index([status])
+  @@index([startTime])
+  @@index([organizerId])
 }
 
 model OrganizerRequest {
@@ -125,6 +129,9 @@ model OrganizerRequest {
   status OrgRequestStatus @default(PENDING)
 
   createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([status])
 }
 
 model EventRegistration {
@@ -145,6 +152,9 @@ model EventRegistration {
   event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
   @@unique([userId, eventId])
+  @@index([eventId])
+  @@index([userId])
+  @@index([status])
 }
 
 model PointHistory {
@@ -198,5 +208,7 @@ model Notification {
   event Event? @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([eventId])
+  @@index([isRead])
   @@index([createdAt])
 }

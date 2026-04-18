@@ -18,6 +18,7 @@ describe('GamificationController', () => {
     checkAndAssignBadges: jest.fn(),
     updateStreak: jest.fn(),
   };
+  const mockReq = { user: { sub: 'user-123' } };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -54,7 +55,7 @@ describe('GamificationController', () => {
       };
       mockGamificationService.getUserStats.mockResolvedValue(mockStats);
 
-      const result = await controller.getMyPoints('user-123');
+      const result = await controller.getMyPoints(mockReq as any);
 
       expect(result).toEqual(mockStats);
       expect(service.getUserStats).toHaveBeenCalledWith('user-123');
@@ -78,7 +79,7 @@ describe('GamificationController', () => {
       mockGamificationService.getPointHistory.mockResolvedValue(mockHistory);
 
       const pagination = { page: 1, limit: 20 };
-      const result = await controller.getPointHistory('user-123', pagination);
+      const result = await controller.getPointHistory(mockReq as any, pagination);
 
       expect(result).toEqual(mockHistory);
       expect(service.getPointHistory).toHaveBeenCalledWith('user-123', pagination);
@@ -146,7 +147,7 @@ describe('GamificationController', () => {
       ];
       mockGamificationService.getUserBadges.mockResolvedValue(mockUserBadges);
 
-      const result = await controller.getMyBadges('user-123');
+      const result = await controller.getMyBadges(mockReq as any);
 
       expect(result).toEqual(mockUserBadges);
       expect(service.getUserBadges).toHaveBeenCalledWith('user-123');
@@ -157,7 +158,7 @@ describe('GamificationController', () => {
     it('should return user rank', async () => {
       mockGamificationService.getUserRank.mockResolvedValue(5);
 
-      const result = await controller.getUserRank('user-123');
+      const result = await controller.getUserRank(mockReq as any);
 
       expect(result).toEqual({ userId: 'user-123', rank: 5 });
       expect(service.getUserRank).toHaveBeenCalledWith('user-123');
@@ -193,7 +194,7 @@ describe('GamificationController', () => {
     it('should trigger badge check', async () => {
       mockGamificationService.checkAndAssignBadges.mockResolvedValue(undefined);
 
-      const result = await controller.checkBadges('user-123');
+      const result = await controller.checkBadges(mockReq as any);
 
       expect(result).toEqual({ success: true, message: 'Badge check completed' });
       expect(service.checkAndAssignBadges).toHaveBeenCalledWith('user-123');
@@ -204,7 +205,7 @@ describe('GamificationController', () => {
     it('should update user streak', async () => {
       mockGamificationService.updateStreak.mockResolvedValue(7);
 
-      const result = await controller.updateStreak('user-123');
+      const result = await controller.updateStreak(mockReq as any);
 
       expect(result).toEqual({ userId: 'user-123', currentStreak: 7 });
       expect(service.updateStreak).toHaveBeenCalledWith('user-123');

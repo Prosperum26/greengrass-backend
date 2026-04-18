@@ -4,6 +4,7 @@ import { PointReason, PrismaClient } from '@prisma/client';
 import { AddPointsDto } from './dto/add-points.dto';
 import { PaginationDto } from './dto/pagination.dto';
 import { LeaderboardQueryDto } from './dto/leaderboard-query.dto';
+import { PrismaService } from '../prisma/prisma.service';
 
 describe('GamificationService Integration', () => {
   let service: GamificationService;
@@ -25,7 +26,7 @@ describe('GamificationService Integration', () => {
     });
     testUserId = testUser.id;
 
-    // Create test event
+    // Create test event (with organizer relation)
     const testEvent = await prisma.event.create({
       data: {
         title: 'Test Event',
@@ -37,6 +38,9 @@ describe('GamificationService Integration', () => {
         endTime: new Date(Date.now() + 86400000),
         points: 50,
         qrSecret: 'test-secret',
+        organizer: {
+          connect: { id: testUserId },
+        },
       },
     });
     testEventId = testEvent.id;
@@ -44,7 +48,13 @@ describe('GamificationService Integration', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [GamificationService],
+      providers: [
+        GamificationService,
+        {
+          provide: PrismaService,
+          useValue: prisma,
+        },
+      ],
     }).compile();
 
     service = module.get<GamificationService>(GamificationService);
@@ -55,9 +65,11 @@ describe('GamificationService Integration', () => {
     });
 
     // Reset user points
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
     await prisma.user.update({
       where: { id: testUserId },
-      data: { totalPoints: 0, currentStreak: 0 },
+      data: { totalPoints: 0, currentStreak: 0, lastActivityAt: yesterday },
     });
   });
 
@@ -72,11 +84,11 @@ describe('GamificationService Integration', () => {
     await prisma.eventRegistration.deleteMany({
       where: { userId: testUserId },
     });
-    await prisma.user.delete({
-      where: { id: testUserId },
-    });
     await prisma.event.delete({
       where: { id: testEventId },
+    });
+    await prisma.user.delete({
+      where: { id: testUserId },
     });
     await prisma.$disconnect();
   });

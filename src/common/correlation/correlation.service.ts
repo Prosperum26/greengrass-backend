@@ -13,7 +13,7 @@
 
 import { Injectable } from '@nestjs/common';
 import { createNamespace, Namespace } from 'cls-hooked';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 
 const CORRELATION_NAMESPACE = 'correlation';
 const CORRELATION_ID_KEY = 'correlationId';
@@ -31,7 +31,7 @@ export class CorrelationService {
    * Generate a new correlation ID
    */
   generateId(): string {
-    return uuidv4();
+    return randomUUID();
   }
 
   /**

@@ -8,7 +8,7 @@ import {
 import { ApiTags, ApiOperation, ApiQuery, ApiParam } from '@nestjs/swagger';
 import { MapService, EventMarker } from './map.service';
 import { JwtAuthGuard } from '../../common/guards/jwt.guard';
-import { Public } from '../../common/decorators/public.decorater';
+import { Public } from '../../common/decorators/public.decorator';
 
 @ApiTags('Map')
 @Controller('map')

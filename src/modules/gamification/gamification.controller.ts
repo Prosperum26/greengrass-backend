@@ -17,7 +17,7 @@ import { PaginationDto } from './dto/pagination.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt.guard';
 import { Roles } from '../events/decorators/roles.decorator';
 import { RolesGuard } from '../events/guards/roles.guard';
-import { Public } from '../../common/decorators/public.decorater';
+import { Public } from '../../common/decorators/public.decorator';
 
 interface RequestWithUser extends Request {
   user: {

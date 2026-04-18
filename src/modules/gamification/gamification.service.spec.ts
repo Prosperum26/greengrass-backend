@@ -2,13 +2,21 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { GamificationService } from './gamification.service';
 import { PointReason } from '@prisma/client';
 import { AddPointsDto } from './dto/add-points.dto';
+import { PrismaService } from '../prisma/prisma.service';
 
 describe('GamificationService', () => {
   let service: GamificationService;
+  const mockPrisma = {};
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [GamificationService],
+      providers: [
+        GamificationService,
+        {
+          provide: PrismaService,
+          useValue: mockPrisma,
+        },
+      ],
     }).compile();
 
     service = module.get<GamificationService>(GamificationService);
