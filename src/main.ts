@@ -57,7 +57,8 @@ async function bootstrap() {
   // Security: Rate limiting
   const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // Limit each IP to 100 requests per windowMs
+    max: 1000, // Higher limit for local development traffic
+    skip: (req) => req.method === 'OPTIONS',
     standardHeaders: true,
     legacyHeaders: false,
     handler: (req, res) => {
@@ -74,6 +75,7 @@ async function bootstrap() {
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 5, // 5 attempts per 15 minutes
     skipSuccessfulRequests: true, // Don't count successful logins
+    skip: (req) => req.method === 'OPTIONS',
     standardHeaders: true,
     legacyHeaders: false,
     handler: (req, res) => {
@@ -87,10 +89,13 @@ async function bootstrap() {
   app.use('/auth/register', authLimiter);
 
   // Security: CORS configuration
-  const allowedOrigins = configService
+  const configuredOrigins = configService
     .get<string>('ALLOWED_ORIGINS')
     ?.split(',')
     .map((o) => o.trim()) ?? ['http://localhost:3000', 'http://localhost:5173'];
+
+  const loopbackOriginPattern =
+    /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/i;
 
   app.enableCors({
     origin: (origin, callback) => {
@@ -100,7 +105,10 @@ async function bootstrap() {
         return;
       }
 
-      if (allowedOrigins.includes(origin)) {
+      if (
+        configuredOrigins.includes(origin) ||
+        loopbackOriginPattern.test(origin)
+      ) {
         callback(null, true);
       } else {
         logger.warn(`Blocked CORS request from origin: ${origin}`);

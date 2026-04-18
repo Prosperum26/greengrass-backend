@@ -18,6 +18,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { Request } from 'express';
 import type { Express } from 'express';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { Public } from '../../common/decorators/public.decorator';
 import {
   CreateEventDto,
   GetEventsQueryDto,
@@ -43,6 +44,7 @@ export class EventsController {
   constructor(private readonly eventsService: EventsService) {}
 
   @Get()
+  @Public()
   async getEvents(@Query() query: GetEventsQueryDto) {
     const data = await this.eventsService.getEvents(query);
     return ok(data);
@@ -101,6 +103,7 @@ export class EventsController {
   }
 
   @Get(':id')
+  @Public()
   async getEventById(@Param('id') id: string) {
     const data = await this.eventsService.getEventById(id);
     return ok(data);
