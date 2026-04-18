@@ -4,6 +4,7 @@ import {
   ConflictException,
   BadRequestException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { GamificationService } from '../gamification/gamification.service';
 import { QrUtil } from './utils/qr.util';
@@ -24,9 +25,13 @@ export class CheckinService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly gamificationService: GamificationService,
+    private readonly configService: ConfigService,
   ) {
-    this.qrSecret =
-      process.env.QR_SECRET || 'default-secret-change-in-production';
+    const qrSecret = this.configService.get<string>('QR_SECRET');
+    if (!qrSecret) {
+      throw new Error('QR_SECRET environment variable is required');
+    }
+    this.qrSecret = qrSecret;
   }
 
   /**

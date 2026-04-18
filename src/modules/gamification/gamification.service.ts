@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { PrismaClient, PointReason, Prisma } from '@prisma/client';
+import { PointReason, Prisma } from '@prisma/client';
+import { PrismaService } from '../prisma/prisma.service';
 import { AddPointsDto } from './dto/add-points.dto';
 import {
   UserStats,
@@ -12,7 +13,6 @@ import { PaginationDto } from './dto/pagination.dto';
 @Injectable()
 export class GamificationService {
   private readonly logger = new Logger(GamificationService.name);
-  private readonly prisma: PrismaClient;
 
   // Point values for different actions
   private readonly POINT_VALUES: Record<PointReason, number> = {
@@ -64,9 +64,7 @@ export class GamificationService {
     },
   ];
 
-  constructor() {
-    this.prisma = new PrismaClient();
-  }
+  constructor(private readonly prisma: PrismaService) {}
 
   /**
    * Add points to a user and create a transaction record

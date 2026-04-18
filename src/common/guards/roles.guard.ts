@@ -1,25 +1,40 @@
-import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
+import {
+  CanActivate,
+  ExecutionContext,
+  ForbiddenException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { Role, ROLES_KEY } from '../decorators/roles.decorator';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
-  constructor(private reflector: Reflector) {}
+  constructor(private readonly reflector: Reflector) {}
 
-  // Check quyền truy cập theo role
   canActivate(context: ExecutionContext): boolean {
-    const roles = this.reflector.getAllAndOverride<string[]>('roles', [
+    const requiredRoles = this.reflector.getAllAndOverride<Role[]>(ROLES_KEY, [
       context.getHandler(),
       context.getClass(),
     ]);
 
-    // Không set role → cho phép truy cập
-    if (!roles) return true;
+    // No @Roles() decorator → allow access (other guards handle auth)
+    if (!requiredRoles || requiredRoles.length === 0) {
+      return true;
+    }
 
-    // Lấy user từ request (đã được JwtAuthGuard gắn vào)
-    const req = context.switchToHttp().getRequest();
-    const user = req.user;
+    const { user } = context.switchToHttp().getRequest();
 
-    // Check role hợp lệ
-    return roles.includes(user.role);
+    if (!user) {
+      throw new UnauthorizedException('No authenticated user found.');
+    }
+
+    if (!requiredRoles.includes(user.role as Role)) {
+      throw new ForbiddenException(
+        `Access denied. Required: [${requiredRoles.join(', ')}]. Your role: ${user.role}.`,
+      );
+    }
+
+    return true;
   }
 }

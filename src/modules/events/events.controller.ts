@@ -17,13 +17,13 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Request } from 'express';
 import type { Express } from 'express';
-import { Roles } from './decorators/roles.decorator';
+import { Roles } from '../../common/decorators/roles.decorator';
 import {
   CreateEventDto,
   GetEventsQueryDto,
   GetAllEventsQueryDto,
 } from './dto/create-event.dto';
-import { RolesGuard } from './guards/roles.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
 import { EventsService } from './events.service';
 import { JwtAuthGuard } from '../../common/guards/jwt.guard';
 import {

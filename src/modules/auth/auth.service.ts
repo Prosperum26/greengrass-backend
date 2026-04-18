@@ -3,6 +3,7 @@ import {
   UnauthorizedException,
   BadRequestException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from 'src/prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
@@ -10,11 +11,16 @@ import { OAuth2Client } from 'google-auth-library';
 
 @Injectable()
 export class AuthService {
-  private googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+  private googleClient: OAuth2Client;
+
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
-  ) {}
+    private configService: ConfigService,
+  ) {
+    const googleClientId = this.configService.get<string>('GOOGLE_CLIENT_ID');
+    this.googleClient = new OAuth2Client(googleClientId);
+  }
 
   // ========================
   // REGISTER
@@ -116,23 +122,25 @@ export class AuthService {
   // ========================
   // JWT GENERATOR
   // ========================
-  private async generateToken(user: any) {
-    // Tạo token
+  private async generateToken(user: { id: string; email: string; role: string }) {
     const payload = {
       sub: user.id,
       email: user.email,
       role: user.role,
     };
 
-    // access token
+    const jwtSecret = this.configService.get<string>('JWT_SECRET');
+    const jwtRefreshSecret = this.configService.get<string>('JWT_REFRESH_SECRET');
+
+    // Access token
     const accessToken = this.jwtService.sign(payload, {
-      secret: process.env.JWT_SECRET,
+      secret: jwtSecret,
       expiresIn: '15m',
     });
 
-    // refresh token
+    // Refresh token
     const refreshToken = this.jwtService.sign(payload, {
-      secret: process.env.JWT_REFRESH_SECRET,
+      secret: jwtRefreshSecret,
       expiresIn: '7d',
     });
 
@@ -151,17 +159,34 @@ export class AuthService {
   // REFRESH TOKEN
   // ========================
   async refresh(userId: string, refreshToken: string) {
-    // cấp lại token
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
     });
 
-    // check token hợp lệ
+    // Validate the provided refresh token
     if (!user || user.refreshToken !== refreshToken) {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
-    return this.generateToken(user);
+    // Security: Verify the refresh token hasn't expired
+    const refreshSecret = this.configService.get<string>('JWT_REFRESH_SECRET');
+    try {
+      this.jwtService.verify(refreshToken, {
+        secret: refreshSecret,
+      });
+    } catch {
+      // Token expired - clear it from database
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: { refreshToken: null },
+      });
+      throw new UnauthorizedException('Refresh token expired');
+    }
+
+    // Generate new tokens (token rotation)
+    const tokens = await this.generateToken(user);
+
+    return tokens;
   }
 
   // ========================

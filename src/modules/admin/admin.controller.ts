@@ -16,8 +16,8 @@ import {
 import { OrgRequestStatus } from '@prisma/client';
 import { AdminService } from './admin.service';
 import { JwtAuthGuard } from '../../common/guards/jwt.guard';
-import { RolesGuard } from '../events/guards/roles.guard';
-import { Roles } from '../events/decorators/roles.decorator';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Roles } from '../../common/decorators/roles.decorator';
 import { OrganizerRequestListResponseDto } from './dto/organizer-request-response.dto';
 import {
   RejectRequestDto,
