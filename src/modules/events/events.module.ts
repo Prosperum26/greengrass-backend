@@ -3,9 +3,10 @@ import { EventsController } from './events.controller';
 import { EventsService } from './events.service';
 import { PrismaModule } from '../../prisma/prisma.module';
 import { GamificationModule } from '../gamification/gamification.module';
+import { UploadModule } from '../upload/upload.module';
 
 @Module({
-  imports: [PrismaModule, GamificationModule],
+  imports: [PrismaModule, GamificationModule, UploadModule],
   controllers: [EventsController],
   providers: [EventsService],
 })

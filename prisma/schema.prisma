@@ -97,6 +97,11 @@ model Event {
   qrSecret    String
   status      EventStatus @default(UPCOMING)
 
+  // Image fields
+  coverImageUrl String?
+  coverImagePublicId String?
+  galleryImages String[]
+
   // THÊM: Cột lưu ID người tổ chức
   organizerId String
   organizer   User        @relation("EventOrganizer", fields: [organizerId], references: [id])
@@ -127,8 +132,10 @@ model EventRegistration {
   status      RegistrationStatus @default(REGISTERED)
   checkInTime DateTime?
   proofUrl    String?
+  proofImageUrl    String?
+  proofImagePublicId String?
   proofStatus ProofStatus        @default(PENDING)
-  
+
   // THÊM: Cột lưu thời gian đăng ký
   createdAt   DateTime           @default(now())
 

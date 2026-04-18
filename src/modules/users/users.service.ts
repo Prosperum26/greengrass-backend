@@ -3,10 +3,15 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { plainToInstance } from 'class-transformer';
 import { UserResponseDto } from './dto/user-response.dto';
+import { UploadService } from '../upload/upload.service';
+import type { Express } from 'express';
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly uploadService: UploadService,
+  ) {}
 
   async getMe(userId: string): Promise<UserResponseDto> {
     const user = await this.prisma.user.findUnique({
@@ -118,5 +123,34 @@ export class UsersService {
         awardedAt: ub.awardedAt,
       })),
     };
+  }
+
+  async uploadAvatar(
+    userId: string,
+    avatar: Express.Multer.File,
+  ): Promise<{ avatarUrl: string }> {
+    // Validate file
+    this.uploadService.validateFile(avatar);
+
+    // Get current user to check for old avatar
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { avatarUrl: true },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    // Upload new avatar (auto-cropped to 300x300)
+    const uploadResult = await this.uploadService.uploadAvatar(avatar, userId);
+
+    // Update user with new avatar URL
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { avatarUrl: uploadResult.url },
+    });
+
+    return { avatarUrl: uploadResult.url };
   }
 }

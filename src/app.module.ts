@@ -13,10 +13,12 @@ import { ForumModule } from './modules/forum/forum.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { PrismaModule } from './modules/prisma/prisma.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { UploadModule } from './modules/upload/upload.module';
 
 @Module({
   imports: [
     PrismaModule,
+    UploadModule,
     AuthModule,
     UsersModule,
     EventsModule,

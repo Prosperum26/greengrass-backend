@@ -2,15 +2,26 @@ import {
   Controller,
   Get,
   Patch,
+  Post,
   Body,
   Param,
   UseGuards,
   Req,
+  UploadedFile,
+  UseInterceptors,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { UsersService } from './users.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt.guard';
 import { Public } from '../../common/decorators/public.decorater';
+import {
+  imageFileFilter,
+  MAX_FILE_SIZE,
+} from '../../common/interceptors/file-upload.interceptor';
+import type { Express } from 'express';
 
 interface RequestWithUser extends Request {
   user: {
@@ -49,5 +60,20 @@ export class UsersController {
   @Get('me/points')
   async getMyPoints(@Req() req: RequestWithUser) {
     return this.usersService.getMyPoints(req.user.sub);
+  }
+
+  @Post('me/avatar')
+  @HttpCode(HttpStatus.OK)
+  @UseInterceptors(
+    FileInterceptor('avatar', {
+      limits: { fileSize: MAX_FILE_SIZE },
+      fileFilter: imageFileFilter,
+    }),
+  )
+  async uploadAvatar(
+    @Req() req: RequestWithUser,
+    @UploadedFile() avatar: Express.Multer.File,
+  ) {
+    return this.usersService.uploadAvatar(req.user.sub, avatar);
   }
 }

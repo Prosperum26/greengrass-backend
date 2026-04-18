@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { GamificationService } from '../gamification/gamification.service';
+import { UploadService } from '../upload/upload.service';
 import {
   CreateEventDto,
   EventStatus,
@@ -13,6 +14,7 @@ import {
   GetAllEventsQueryDto,
 } from './dto/create-event.dto';
 import { PointReason } from '@prisma/client';
+import type { Express } from 'express';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Shared Prisma select shapes
@@ -30,6 +32,8 @@ const EVENT_SELECT = {
   endTime: true,
   points: true,
   status: true,
+  coverImageUrl: true,
+  galleryImages: true,
   organizerId: true,
   createdAt: true,
   updatedAt: true,
@@ -38,7 +42,7 @@ const EVENT_SELECT = {
 
 const USER_SELECT = {
   id: true,
-  name: true,
+  fullName: true,
   email: true,
   role: true,
 } as const;
@@ -76,6 +80,7 @@ export class EventsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly gamificationService: GamificationService,
+    private readonly uploadService: UploadService,
   ) {}
 
   async getEvents(query: GetEventsQueryDto) {
@@ -121,7 +126,11 @@ export class EventsService {
     };
   }
 
-  async createEvent(dto: CreateEventDto, organizerId: string) {
+  async createEvent(
+    dto: CreateEventDto,
+    organizerId: string,
+    coverImage?: Express.Multer.File,
+  ) {
     const startTime = new Date(dto.startTime);
     const endTime = new Date(dto.endTime);
 
@@ -129,6 +138,19 @@ export class EventsService {
       throw new BadRequestException(
         'startTime must be strictly before endTime.',
       );
+    }
+
+    // Upload cover image if provided
+    let coverImageUrl: string | undefined;
+    let coverImagePublicId: string | undefined;
+
+    if (coverImage) {
+      const uploadResult = await this.uploadService.uploadEventCover(
+        coverImage,
+        'temp', // temporary ID, will update after event creation
+      );
+      coverImageUrl = uploadResult.url;
+      coverImagePublicId = uploadResult.publicId;
     }
 
     const event = await this.prisma.event.create({
@@ -144,11 +166,78 @@ export class EventsService {
         qrSecret: dto.qrSecret,
         status: deriveStatus(startTime, endTime),
         organizerId,
+        coverImageUrl,
+        coverImagePublicId,
+        galleryImages: [],
       },
       select: EVENT_SELECT,
     });
 
+    // Update cover image with actual event ID if uploaded
+    if (coverImage && coverImagePublicId) {
+      const newUpload = await this.uploadService.uploadEventCover(
+        coverImage,
+        event.id,
+      );
+      await this.prisma.event.update({
+        where: { id: event.id },
+        data: {
+          coverImageUrl: newUpload.url,
+          coverImagePublicId: newUpload.publicId,
+        },
+      });
+      // Delete temp image
+      await this.uploadService.deleteImage(coverImagePublicId).catch(() => {
+        // Ignore deletion error
+      });
+    }
+
     return withDynamicStatus(event);
+  }
+
+  async addGalleryImage(
+    eventId: string,
+    userId: string,
+    image: Express.Multer.File,
+  ) {
+    // Verify event exists and user is organizer
+    const event = await this.prisma.event.findUnique({
+      where: { id: eventId },
+      select: {
+        organizerId: true,
+        galleryImages: true,
+      },
+    });
+
+    if (!event) {
+      throw new NotFoundException(`Event with id '${eventId}' not found.`);
+    }
+
+    if (event.organizerId !== userId) {
+      throw new BadRequestException(
+        'You are not allowed to modify this event.',
+      );
+    }
+
+    // Upload image
+    const uploadResult = await this.uploadService.uploadEventGallery(
+      image,
+      eventId,
+    );
+
+    // Update event with new gallery image
+    const currentImages = event.galleryImages || [];
+    const updatedImages = [...currentImages, uploadResult.url];
+
+    const updated = await this.prisma.event.update({
+      where: { id: eventId },
+      data: {
+        galleryImages: updatedImages,
+      },
+      select: EVENT_SELECT,
+    });
+
+    return withDynamicStatus(updated);
   }
 
   async getEventById(id: string) {

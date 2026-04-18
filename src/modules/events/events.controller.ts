@@ -10,9 +10,13 @@ import {
   Patch,
   Query,
   Req,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { Request } from 'express';
+import type { Express } from 'express';
 import { Roles } from './decorators/roles.decorator';
 import {
   CreateEventDto,
@@ -22,6 +26,10 @@ import {
 import { RolesGuard } from './guards/roles.guard';
 import { EventsService } from './events.service';
 import { JwtAuthGuard } from '../../common/guards/jwt.guard';
+import {
+  imageFileFilter,
+  MAX_FILE_SIZE,
+} from '../../common/interceptors/file-upload.interceptor';
 
 interface AuthRequest extends Request {
   user: { sub: string; role: 'STUDENT' | 'ORGANIZER' | 'ADMIN' };
@@ -51,8 +59,44 @@ export class EventsController {
   @Post()
   @Roles('ORGANIZER')
   @HttpCode(HttpStatus.CREATED)
-  async createEvent(@Body() dto: CreateEventDto, @Req() req: AuthRequest) {
-    const data = await this.eventsService.createEvent(dto, req.user.sub);
+  @UseInterceptors(
+    FileInterceptor('coverImage', {
+      limits: { fileSize: MAX_FILE_SIZE },
+      fileFilter: imageFileFilter,
+    }),
+  )
+  async createEvent(
+    @Body() dto: CreateEventDto,
+    @Req() req: AuthRequest,
+    @UploadedFile() coverImage?: Express.Multer.File,
+  ) {
+    const data = await this.eventsService.createEvent(
+      dto,
+      req.user.sub,
+      coverImage,
+    );
+    return ok(data);
+  }
+
+  @Post(':id/gallery')
+  @Roles('ORGANIZER')
+  @HttpCode(HttpStatus.CREATED)
+  @UseInterceptors(
+    FileInterceptor('image', {
+      limits: { fileSize: MAX_FILE_SIZE },
+      fileFilter: imageFileFilter,
+    }),
+  )
+  async addGalleryImage(
+    @Param('id') eventId: string,
+    @Req() req: AuthRequest,
+    @UploadedFile() image: Express.Multer.File,
+  ) {
+    const data = await this.eventsService.addGalleryImage(
+      eventId,
+      req.user.sub,
+      image,
+    );
     return ok(data);
   }
 
