@@ -95,6 +95,10 @@ export class CreateEventDto {
   @IsString()
   @IsNotEmpty()
   qrSecret!: string;
+
+  // Cover image is handled by FileInterceptor, but needs to be allowed through validation
+  @IsOptional()
+  coverImage?: any;
 }
 
 export class GetEventsQueryDto {
