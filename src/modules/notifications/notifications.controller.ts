@@ -12,14 +12,8 @@ import {
 import { ApiTags, ApiOperation, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
 import { NotificationsService, NotificationData } from './notifications.service';
 import { JwtAuthGuard } from '../../common/guards/jwt.guard';
-
-interface RequestWithUser extends Request {
-  user: {
-    sub: string;
-    email: string;
-    role: string;
-  };
-}
+import { AuthenticatedRequest, ApiSuccessResponse } from '../../common/types';
+import { success, deleted } from '../../common/utils';
 
 @ApiTags('Notifications')
 @ApiBearerAuth()
@@ -31,13 +25,15 @@ export class NotificationsController {
   @Get()
   @ApiOperation({
     summary: 'Lấy danh sách thông báo của user',
-    description: 'Trả về tất cả thông báo của người dùng hiện tại, sắp xếp theo thời gian mới nhất',
+    description:
+      'Trả về tất cả thông báo của người dùng hiện tại, sắp xếp theo thời gian mới nhất',
   })
   async getNotifications(
-    @Req() req: RequestWithUser,
-  ): Promise<{ success: true; data: NotificationData[] }> {
-    const data = await this.notificationsService.getUserNotifications(req.user.sub);
-    return { success: true, data };
+    @Req() req: AuthenticatedRequest,
+  ): Promise<ApiSuccessResponse<NotificationData[]>> {
+    const data =
+      await this.notificationsService.getUserNotifications(req.user.sub);
+    return success(data);
   }
 
   @Get('unread-count')
@@ -46,10 +42,10 @@ export class NotificationsController {
     description: 'Trả về số lượng thông báo chưa đọc của người dùng',
   })
   async getUnreadCount(
-    @Req() req: RequestWithUser,
-  ): Promise<{ success: true; data: { count: number } }> {
+    @Req() req: AuthenticatedRequest,
+  ): Promise<ApiSuccessResponse<{ count: number }>> {
     const count = await this.notificationsService.getUnreadCount(req.user.sub);
-    return { success: true, data: { count } };
+    return success({ count });
   }
 
   @Post(':id/read')
@@ -61,10 +57,10 @@ export class NotificationsController {
   @ApiParam({ name: 'id', description: 'Notification ID' })
   async markAsRead(
     @Param('id') id: string,
-    @Req() req: RequestWithUser,
-  ): Promise<{ success: true; message: string }> {
+    @Req() req: AuthenticatedRequest,
+  ): Promise<ApiSuccessResponse<null>> {
     await this.notificationsService.markAsRead(id, req.user.sub);
-    return { success: true, message: 'Notification marked as read' };
+    return deleted('Notification marked as read');
   }
 
   @Post('read-all')
@@ -74,10 +70,10 @@ export class NotificationsController {
     description: 'Đánh dấu tất cả thông báo của người dùng là đã đọc',
   })
   async markAllAsRead(
-    @Req() req: RequestWithUser,
-  ): Promise<{ success: true; message: string }> {
+    @Req() req: AuthenticatedRequest,
+  ): Promise<ApiSuccessResponse<null>> {
     await this.notificationsService.markAllAsRead(req.user.sub);
-    return { success: true, message: 'All notifications marked as read' };
+    return deleted('All notifications marked as read');
   }
 
   @Delete(':id')
@@ -89,9 +85,9 @@ export class NotificationsController {
   @ApiParam({ name: 'id', description: 'Notification ID' })
   async deleteNotification(
     @Param('id') id: string,
-    @Req() req: RequestWithUser,
-  ): Promise<{ success: true; message: string }> {
+    @Req() req: AuthenticatedRequest,
+  ): Promise<ApiSuccessResponse<null>> {
     await this.notificationsService.deleteNotification(id, req.user.sub);
-    return { success: true, message: 'Notification deleted' };
+    return deleted('Notification deleted');
   }
 }

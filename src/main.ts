@@ -6,6 +6,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { ConfigService } from '@nestjs/config';
+import { GlobalExceptionFilter } from './common/filters';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -117,6 +118,9 @@ async function bootstrap() {
       },
     }),
   );
+
+  // Global exception filter for consistent error responses
+  app.useGlobalFilters(new GlobalExceptionFilter());
 
   await app.listen(port);
   logger.log(`Application is running on: ${await app.getUrl()}`);
