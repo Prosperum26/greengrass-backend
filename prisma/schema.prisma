@@ -76,7 +76,8 @@ model User {
   eventRegistrations EventRegistration[]
   pointHistories     PointHistory[]
   userBadges         UserBadge[]
-  
+  notifications      Notification[]
+
   // THÊM: Mối quan hệ User làm người tổ chức sự kiện
   organizedEvents    Event[]    @relation("EventOrganizer")
 
@@ -107,6 +108,7 @@ model Event {
   organizer   User        @relation("EventOrganizer", fields: [organizerId], references: [id])
 
   eventRegistrations EventRegistration[]
+  notifications      Notification[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -181,4 +183,20 @@ model UserBadge {
 
   @@unique([userId, badgeId])
   @@index([userId])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  eventId   String?
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event Event? @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
 }

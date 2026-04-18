@@ -281,10 +281,12 @@ DATABASE_URL=postgresql://...
 
 - ✅ **Auth** — Fully operational (JWT + Refresh Token)
 - ✅ **Users** — Fully implemented
-- ✅ **Events** — Fully implemented (CRUD + Registration)
+- ✅ **Events** — Fully implemented (CRUD + Registration + Check-in)
 - ✅ **Checkin** — Fully implemented (QR + Integration with Gamification)
 - ✅ **Gamification** — Fully implemented (Points + Badges + Leaderboard)
-- ⚠️ **Registrations/Leaderboard/Map/Forum/Notifications** — Not implemented (stubs only)
+- ✅ **Map** — Fully implemented (Event markers for Leaflet)
+- ✅ **Notifications** — Fully implemented (Cron reminders + User notifications)
+- ✅ **AI Assistant** — Fully implemented (Gemini API integration)
 
 ---
 
@@ -645,23 +647,173 @@ ADMIN_FULL_NAME=Your Admin Name
 
 ---
 
-### Map & Eco System
+### Map — **FULLY IMPLEMENTED** ✅
 
-- `GET /map/eco-points` – Điểm sinh thái gần bạn
-- `GET /map/routes` – Gợi ý lộ trình di chuyển xanh
+Module Map cung cấp API để lấy tọa độ các sự kiện cho bản đồ Leaflet.
+
+**Base Path:** `/map`
+
+**Authentication:** Public (không cần auth)
+
+#### API Endpoints
+
+| Method | Endpoint           | Description                          | Query Params                             | Response                                   |
+| ------ | ------------------ | ------------------------------------ | ---------------------------------------- | ------------------------------------------ |
+| `GET`  | `/map/markers`     | Lấy tất cả event markers cho Leaflet | -                                        | Danh sách markers với lat, lng, title, ... |
+| `GET`  | `/map/markers/:id` | Lấy chi tiết một event marker        | -                                        | Chi tiết marker                            |
+| `GET`  | `/map/nearby`      | Tìm sự kiện gần một vị trí (tính km) | `lat`, `lng`, `radius` (km, default: 10) | Danh sách markers trong bán kính           |
+
+**Response Example:**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "event-uuid",
+      "title": "Trồng cây xanh tại Thủ Đức",
+      "location": "Công viên Thủ Đức",
+      "lat": 10.762622,
+      "lng": 106.660172,
+      "startTime": "2025-06-01T08:00:00.000Z",
+      "endTime": "2025-06-01T12:00:00.000Z",
+      "status": "UPCOMING",
+      "participants": 24,
+      "image": "https://.../cover.jpg",
+      "points": 50
+    }
+  ]
+}
+```
+
+**Frontend Leaflet Integration:**
+
+```javascript
+// Khởi tạo map
+var map = L.map('map').setView([10.762622, 106.660172], 13);
+
+// Thêm tile layer
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '&copy; OpenStreetMap contributors',
+}).addTo(map);
+
+// Lấy markers từ API và hiển thị
+fetch('/map/markers')
+  .then((res) => res.json())
+  .then(({ data }) => {
+    data.forEach((marker) => {
+      L.marker([marker.lat, marker.lng])
+        .addTo(map)
+        .bindPopup(
+          `<b>${marker.title}</b><br>${marker.location}<br>Tham gia: ${marker.participants} người`,
+        );
+    });
+  });
+```
 
 ---
 
-### AI Assistant
+### Notifications — **FULLY IMPLEMENTED** ✅
 
-- `POST /assistant/chat` – Chatbot hỗ trợ thông minh
-- `GET /assistant/recommendations` – Gợi ý sự kiện cá nhân hóa
+Module Notifications cung cấp hệ thống thông báo cho người dùng.
+
+**Tính năng:**
+
+- Cron job tự động tạo thông báo nhắc nhở trước 1 ngày sự kiện (9AM hàng ngày)
+- API quản lý thông báo (xem, đánh dấu đã đọc, xóa)
+
+**Base Path:** `/notifications`
+
+**Authentication:** JWT required
+
+#### API Endpoints
+
+| Method   | Endpoint                      | Description                      | Response                                 |
+| -------- | ----------------------------- | -------------------------------- | ---------------------------------------- |
+| `GET`    | `/notifications`              | Lấy danh sách thông báo của user | Danh sách notifications (mới nhất trước) |
+| `GET`    | `/notifications/unread-count` | Đếm số thông báo chưa đọc        | `{ count: number }`                      |
+| `POST`   | `/notifications/:id/read`     | Đánh dấu thông báo đã đọc        | `{ message: "..." }`                     |
+| `POST`   | `/notifications/read-all`     | Đánh dấu tất cả đã đọc           | `{ message: "..." }`                     |
+| `DELETE` | `/notifications/:id`          | Xóa một thông báo                | `{ message: "..." }`                     |
+
+**Response Example:**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "notif-uuid",
+      "title": "Nhắc nhở: Trồng cây xanh tại Thủ Đức",
+      "message": "Sự kiện sẽ diễn ra vào ngày mai lúc 08:00 tại Công viên Thủ Đức...",
+      "isRead": false,
+      "createdAt": "2025-06-01T09:00:00.000Z",
+      "event": {
+        "id": "event-uuid",
+        "title": "Trồng cây xanh tại Thủ Đức",
+        "startTime": "2025-06-02T08:00:00.000Z",
+        "location": "Công viên Thủ Đức"
+      }
+    }
+  ]
+}
+```
 
 ---
 
-### Notifications
+### AI Assistant — **FULLY IMPLEMENTED** ✅
 
-- `GET /notifications` – Lấy danh sách thông báo
+Module Chatbot cung cấp AI assistant tích hợp Gemini API để hỗ trợ người dùng.
+
+**Tính năng:**
+
+- Chat với AI về môi trường và nền tảng Greengrass
+- Gợi ý sự kiện và hoạt động cá nhân hóa
+- Fallback responses khi không có API key
+
+**Base Path:** `/assistant`
+
+**Authentication:** Public (không cần auth)
+
+#### API Endpoints
+
+| Method | Endpoint                     | Description                | Body                    | Response                  |
+| ------ | ---------------------------- | -------------------------- | ----------------------- | ------------------------- |
+| `POST` | `/assistant/chat`            | Chat với AI assistant      | `{ message, history? }` | `{ response, timestamp }` |
+| `GET`  | `/assistant/recommendations` | Gợi ý sự kiện và hoạt động | -                       | Danh sách gợi ý           |
+
+**Request Example:**
+
+```json
+POST /assistant/chat
+{
+  "message": "Làm sao để tham gia sự kiện trồng cây?",
+  "history": [
+    { "role": "user", "text": "Xin chào" },
+    { "role": "model", "text": "Chào bạn! Tôi có thể giúp gì?" }
+  ]
+}
+```
+
+**Response Example:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "response": "Để tham gia sự kiện trồng cây, bạn có thể: 1) Truy cập trang Events, 2) Chọn sự kiện phù hợp, 3) Nhấn nút Đăng ký. Đừng quên check-in bằng QR code tại sự kiện để nhận điểm thưởng!",
+    "timestamp": "2025-06-01T10:30:00.000Z"
+  }
+}
+```
+
+**Environment Variable:**
+
+```env
+GEMINI_API_KEY=your-gemini-api-key-here
+```
+
+> Nếu không có `GEMINI_API_KEY`, chatbot sẽ trả về responses mặc định.
 
 ---
 

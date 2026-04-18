@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './modules/auth/auth.module';
@@ -14,9 +15,11 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { PrismaModule } from './modules/prisma/prisma.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { UploadModule } from './modules/upload/upload.module';
+import { ChatbotModule } from './modules/chatbot/chatbot.module';
 
 @Module({
   imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
     PrismaModule,
     UploadModule,
     AuthModule,
@@ -30,6 +33,7 @@ import { UploadModule } from './modules/upload/upload.module';
     ForumModule,
     NotificationsModule,
     AdminModule,
+    ChatbotModule,
   ],
   controllers: [AppController],
   providers: [AppService],
