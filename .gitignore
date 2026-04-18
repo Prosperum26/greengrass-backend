@@ -5,6 +5,8 @@
 
 # Logs
 logs
+!src/modules/checkin/logs/
+!src/modules/checkin/logs/checkin.logger.ts
 *.log
 npm-debug.log*
 pnpm-debug.log*
