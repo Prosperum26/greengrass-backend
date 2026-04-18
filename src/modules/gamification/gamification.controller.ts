@@ -15,8 +15,8 @@ import { AddPointsDto } from './dto/add-points.dto';
 import { LeaderboardQueryDto } from './dto/leaderboard-query.dto';
 import { PaginationDto } from './dto/pagination.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt.guard';
-import { Roles } from '../events/decorators/roles.decorator';
-import { RolesGuard } from '../events/guards/roles.guard';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { RolesGuard } from '../../common/guards/roles.guard';
 import { Public } from '../../common/decorators/public.decorator';
 
 interface RequestWithUser extends Request {

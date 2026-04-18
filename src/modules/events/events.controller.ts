@@ -150,8 +150,13 @@ export class EventsController {
   }
 
   @Get(':id/participants')
-  async getParticipants(@Param('id') eventId: string) {
-    const data = await this.eventsService.getParticipants(eventId);
+  @Roles('ORGANIZER', 'ADMIN')
+  async getParticipants(@Param('id') eventId: string, @Req() req: AuthRequest) {
+    const data = await this.eventsService.getParticipants(
+      eventId,
+      req.user.sub,
+      req.user.role,
+    );
     return ok(data);
   }
 }

@@ -8,10 +8,12 @@ import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { OAuth2Client } from 'google-auth-library';
+import { UserStatus } from '@prisma/client';
 
 @Injectable()
 export class AuthService {
   private googleClient: OAuth2Client;
+  private readonly refreshTokenSaltRounds = 10;
 
   constructor(
     private prisma: PrismaService,
@@ -60,6 +62,7 @@ export class AuthService {
     });
 
     if (!user) throw new UnauthorizedException('Invalid credentials');
+    this.ensureUserIsActive(user.status);
 
     // so sánh password
     const isMatch = await bcrypt.compare(password, user.password || '');
@@ -112,9 +115,11 @@ export class AuthService {
           fullName: payload.name || 'Google User',
           password: null,
           role: 'STUDENT',
+          status: 'ACTIVE',
         },
       });
     }
+    this.ensureUserIsActive(user.status);
 
     return this.generateToken(user);
   }
@@ -143,10 +148,14 @@ export class AuthService {
       secret: jwtRefreshSecret,
       expiresIn: '7d',
     });
+    const hashedRefreshToken = await bcrypt.hash(
+      refreshToken,
+      this.refreshTokenSaltRounds,
+    );
 
     await this.prisma.user.update({
       where: { id: user.id },
-      data: { refreshToken },
+      data: { refreshToken: hashedRefreshToken },
     });
 
     return {
@@ -164,7 +173,16 @@ export class AuthService {
     });
 
     // Validate the provided refresh token
-    if (!user || user.refreshToken !== refreshToken) {
+    if (!user || !user.refreshToken) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+    this.ensureUserIsActive(user.status);
+
+    const refreshTokenMatches = await bcrypt.compare(
+      refreshToken,
+      user.refreshToken,
+    );
+    if (!refreshTokenMatches) {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
@@ -208,6 +226,7 @@ export class AuthService {
         fullName,
         password: hash,
         role: 'STUDENT', // // chưa approve nên vẫn là student
+        status: 'ACTIVE',
       },
     });
 
@@ -225,5 +244,11 @@ export class AuthService {
       message: 'Request submitted, waiting for admin approval',
       requestId: request.id,
     };
+  }
+
+  private ensureUserIsActive(status: UserStatus): void {
+    if (status !== UserStatus.ACTIVE) {
+      throw new UnauthorizedException('Account is not active');
+    }
   }
 }

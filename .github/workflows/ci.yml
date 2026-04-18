@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: greengrass_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d greengrass_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/greengrass_test?schema=public
+      JWT_SECRET: test-jwt-secret-key-min-32-characters-long!!
+      JWT_REFRESH_SECRET: test-refresh-secret-key-min-32-characters!
+      QR_SECRET: test-qr-secret-min-16
+      ALLOWED_ORIGINS: http://localhost:3000,http://localhost:5173
+      NODE_ENV: test
+      GOOGLE_CLIENT_ID: test-google-client-id.apps.googleusercontent.com
+      CLOUDINARY_CLOUD_NAME: test-cloud
+      CLOUDINARY_API_KEY: test-key
+      CLOUDINARY_API_SECRET: test-secret
+      GEMINI_API_KEY: test-gemini-key
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Run Prisma migrations
+        run: yarn db:migrate:deploy
+
+      - name: Lint (non-blocking)
+        continue-on-error: true
+        run: yarn lint:check
+
+      - name: Unit tests
+        run: yarn test --runInBand
+
+      - name: E2E tests
+        run: yarn test:e2e --runInBand
+
+      - name: Build
+        run: yarn build

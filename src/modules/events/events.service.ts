@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService } from '../prisma/prisma.service';
 import { GamificationService } from '../gamification/gamification.service';
 import { UploadService } from '../upload/upload.service';
 import {
@@ -369,12 +369,17 @@ export class EventsService {
     return { message: 'Registration cancelled successfully.' };
   }
 
-  async getParticipants(eventId: string) {
+  async getParticipants(
+    eventId: string,
+    requesterId: string,
+    requesterRole: 'STUDENT' | 'ORGANIZER' | 'ADMIN',
+  ) {
     const event = await this.prisma.event.findUnique({
       where: { id: eventId },
       select: {
         id: true,
         title: true,
+        organizerId: true,
         status: true,
         startTime: true,
         endTime: true,
@@ -392,6 +397,14 @@ export class EventsService {
 
     if (!event) {
       throw new NotFoundException(`Event with id '${eventId}' not found.`);
+    }
+    if (
+      requesterRole !== 'ADMIN' &&
+      event.organizerId !== requesterId
+    ) {
+      throw new BadRequestException(
+        'You are not allowed to view participants of this event.',
+      );
     }
 
     return {

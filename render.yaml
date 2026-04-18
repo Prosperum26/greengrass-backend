@@ -1,0 +1,33 @@
+services:
+  - type: web
+    name: greengrass-backend
+    runtime: node
+    plan: free
+    region: singapore
+    buildCommand: yarn install --frozen-lockfile && yarn build
+    startCommand: yarn db:migrate:deploy && yarn start:prod
+    healthCheckPath: /
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_REFRESH_SECRET
+        sync: false
+      - key: QR_SECRET
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false

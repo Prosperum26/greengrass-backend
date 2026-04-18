@@ -17,8 +17,8 @@ import {
   QrResponseDto,
 } from './dto/checkin.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt.guard';
-import { Roles } from '../events/decorators/roles.decorator';
-import { RolesGuard } from '../events/guards/roles.guard';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { RolesGuard } from '../../common/guards/roles.guard';
 
 interface RequestWithUser extends Request {
   user: {
@@ -48,8 +48,9 @@ export class CheckinController {
   @Roles('ORGANIZER')
   async getQrToken(
     @Param('eventId', ParseUUIDPipe) eventId: string,
+    @Req() req: RequestWithUser,
   ): Promise<QrResponseDto> {
-    return this.checkinService.generateQrToken(eventId);
+    return this.checkinService.generateQrToken(eventId, req.user.sub);
   }
 
   /**
@@ -82,8 +83,9 @@ export class CheckinController {
   @Roles('ORGANIZER')
   async getCheckedInParticipants(
     @Param('eventId', ParseUUIDPipe) eventId: string,
+    @Req() req: RequestWithUser,
   ): Promise<Array<{ userId: string; checkInTime: Date; status: string }>> {
-    return this.checkinService.getCheckedInParticipants(eventId);
+    return this.checkinService.getCheckedInParticipants(eventId, req.user.sub);
   }
 
   /**
@@ -97,12 +99,13 @@ export class CheckinController {
   @Roles('ORGANIZER')
   async getCheckInStats(
     @Param('eventId', ParseUUIDPipe) eventId: string,
+    @Req() req: RequestWithUser,
   ): Promise<{
     totalRegistered: number;
     checkedIn: number;
     completed: number;
     checkInRate: number;
   }> {
-    return this.checkinService.getCheckInStats(eventId);
+    return this.checkinService.getCheckInStats(eventId, req.user.sub);
   }
 }

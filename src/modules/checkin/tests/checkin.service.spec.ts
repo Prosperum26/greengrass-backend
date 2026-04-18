@@ -20,6 +20,7 @@ describe('CheckinService', () => {
 
   // Mock data
   const mockUserId = 'user-123';
+  const mockOrganizerId = 'organizer-123';
   const mockEventId = 'event-456';
   const mockQrSecret = 'test-secret';
 
@@ -35,6 +36,7 @@ describe('CheckinService', () => {
     points: 100,
     qrSecret: mockQrSecret,
     status: EventStatus.ONGOING,
+    organizerId: mockOrganizerId,
   };
 
   const mockRegistration = {
@@ -115,7 +117,7 @@ describe('CheckinService', () => {
     it('should generate QR token successfully', async () => {
       mockPrismaService.event.findUnique.mockResolvedValue(mockEvent);
 
-      const result = await service.generateQrToken(mockEventId);
+      const result = await service.generateQrToken(mockEventId, mockOrganizerId);
 
       expect(result).toHaveProperty('eventId', mockEventId);
       expect(result).toHaveProperty('qrToken');
@@ -124,13 +126,19 @@ describe('CheckinService', () => {
       expect(result.qrToken).toHaveLength(64); // SHA256 hex length
       expect(mockPrismaService.event.findUnique).toHaveBeenCalledWith({
         where: { id: mockEventId },
+        select: {
+          id: true,
+          organizerId: true,
+        },
       });
     });
 
     it('should throw NotFoundException when event not found', async () => {
       mockPrismaService.event.findUnique.mockResolvedValue(null);
 
-      await expect(service.generateQrToken(mockEventId)).rejects.toThrow(
+      await expect(
+        service.generateQrToken(mockEventId, mockOrganizerId),
+      ).rejects.toThrow(
         NotFoundException,
       );
     });

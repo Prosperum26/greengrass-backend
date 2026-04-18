@@ -41,15 +41,11 @@ export class CheckinService {
    * @param eventId - The event ID
    * @returns QR response with token and expiration info
    */
-  async generateQrToken(eventId: string): Promise<QrResponseDto> {
-    const event = await this.prisma.event.findUnique({
-      where: { id: eventId },
-    });
-
-    if (!event) {
-      this.logger.logEventNotFound(eventId);
-      throw new NotFoundException(`Event with ID ${eventId} not found`);
-    }
+  async generateQrToken(
+    eventId: string,
+    organizerId: string,
+  ): Promise<QrResponseDto> {
+    await this.ensureOrganizerOwnsEvent(eventId, organizerId);
 
     const qrToken = QrUtil.generateQrToken(eventId, this.qrSecret);
     const now = new Date();
@@ -180,14 +176,9 @@ export class CheckinService {
    */
   async getCheckedInParticipants(
     eventId: string,
+    organizerId: string,
   ): Promise<Array<{ userId: string; checkInTime: Date; status: string }>> {
-    const event = await this.prisma.event.findUnique({
-      where: { id: eventId },
-    });
-
-    if (!event) {
-      throw new NotFoundException(`Event with ID ${eventId} not found`);
-    }
+    await this.ensureOrganizerOwnsEvent(eventId, organizerId);
 
     const checkedInRegistrations = await this.prisma.eventRegistration.findMany(
       {
@@ -222,19 +213,13 @@ export class CheckinService {
    * @param eventId - The event ID
    * @returns Check-in statistics
    */
-  async getCheckInStats(eventId: string): Promise<{
+  async getCheckInStats(eventId: string, organizerId: string): Promise<{
     totalRegistered: number;
     checkedIn: number;
     completed: number;
     checkInRate: number;
   }> {
-    const event = await this.prisma.event.findUnique({
-      where: { id: eventId },
-    });
-
-    if (!event) {
-      throw new NotFoundException(`Event with ID ${eventId} not found`);
-    }
+    await this.ensureOrganizerOwnsEvent(eventId, organizerId);
 
     const [totalRegistered, checkedIn, completed] = await Promise.all([
       this.prisma.eventRegistration.count({
@@ -259,5 +244,27 @@ export class CheckinService {
       completed,
       checkInRate: Math.round(checkInRate * 100) / 100,
     };
+  }
+
+  private async ensureOrganizerOwnsEvent(
+    eventId: string,
+    organizerId?: string,
+  ) {
+    const event = await this.prisma.event.findUnique({
+      where: { id: eventId },
+      select: {
+        id: true,
+        organizerId: true,
+      },
+    });
+    if (!event) {
+      throw new NotFoundException(`Event with ID ${eventId} not found`);
+    }
+    if (organizerId && event.organizerId !== organizerId) {
+      throw new BadRequestException(
+        'You are not allowed to access this event check-in data',
+      );
+    }
+    return event;
   }
 }
