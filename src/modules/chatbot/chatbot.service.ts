@@ -18,13 +18,24 @@ export class ChatbotService {
   private genAI: GoogleGenerativeAI;
   private model: GenerativeModel;
 
+  private readonly primaryModelName = 'gemini-1.5-flash';
+  private readonly fallbackModelName = 'gemini-1.5-flash-latest';
+  private readonly alternativeModelName = 'gemini-pro';
+
   constructor(private readonly configService: ConfigService) {
     const apiKey = this.configService.get<string>('GEMINI_API_KEY');
-    if (apiKey) {
-      this.genAI = new GoogleGenerativeAI(apiKey);
-      this.model = this.genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    if (apiKey && apiKey !== 'your-gemini-api-key') {
+      try {
+        this.genAI = new GoogleGenerativeAI(apiKey);
+        this.model = this.genAI.getGenerativeModel({ model: this.primaryModelName });
+        this.logger.log(`Chatbot initialized with model: ${this.primaryModelName}`);
+      } catch (initError) {
+        this.logger.error('Failed to initialize Gemini API:', initError);
+        this.genAI = undefined as any;
+        this.model = undefined as any;
+      }
     } else {
-      this.logger.warn('GEMINI_API_KEY not configured, chatbot will return mock responses');
+      this.logger.warn('GEMINI_API_KEY not configured or using placeholder value, chatbot will return mock responses');
     }
   }
 
@@ -63,13 +74,32 @@ Context: Greengrass có các tính năng:
 
       let chat;
       if (dto.history && dto.history.length > 0) {
-        const formattedHistory = dto.history.map((h) => ({
-          role: h.role,
-          parts: [{ text: h.text }],
-        }));
-        chat = this.model.startChat({
-          history: formattedHistory,
-        });
+        // Gemini API requires history to start with 'user' role
+        // Filter out any 'model' messages at the start of history
+        let validHistory = [...dto.history];
+        while (validHistory.length > 0 && validHistory[0].role === 'model') {
+          validHistory.shift();
+        }
+        
+        // Also ensure no consecutive same-role messages
+        const dedupedHistory: typeof validHistory = [];
+        for (const msg of validHistory) {
+          if (dedupedHistory.length === 0 || dedupedHistory[dedupedHistory.length - 1].role !== msg.role) {
+            dedupedHistory.push(msg);
+          }
+        }
+        
+        if (dedupedHistory.length > 0) {
+          const formattedHistory = dedupedHistory.map((h) => ({
+            role: h.role,
+            parts: [{ text: h.text }],
+          }));
+          chat = this.model.startChat({
+            history: formattedHistory,
+          });
+        } else {
+          chat = this.model.startChat();
+        }
       } else {
         chat = this.model.startChat();
       }
@@ -84,8 +114,26 @@ Context: Greengrass có các tính năng:
         response: response,
         timestamp: new Date(),
       };
-    } catch (error) {
-      this.logger.error('Error calling Gemini API:', error);
+    } catch (error: any) {
+      // Detailed error logging for debugging
+      this.logger.error('Error calling Gemini API:', {
+        errorMessage: error?.message,
+        errorCode: error?.code,
+        errorStatus: error?.status,
+        errorDetails: error?.details,
+        responseData: error?.response?.data,
+        stack: error?.stack,
+      });
+      
+      // Check for specific error types
+      if (error?.message?.includes('API key not valid')) {
+        this.logger.error('GEMINI_API_KEY is invalid or expired');
+      } else if (error?.message?.includes('quota')) {
+        this.logger.error('Gemini API quota exceeded');
+      } else if (error?.message?.includes('model') || error?.message?.includes('not found')) {
+        this.logger.error('Model gemini-1.5-flash may not be available. Try using gemini-pro or check region availability.');
+      }
+      
       return this.getMockResponse(dto.message);
     }
   }

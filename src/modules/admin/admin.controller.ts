@@ -102,4 +102,16 @@ export class AdminController {
   ): Promise<ApproveRejectResponseDto> {
     return this.adminService.rejectOrganizerRequest(requestId, dto.reason);
   }
+
+  @Post('organizer-requests/:id/delete')
+  @ApiOperation({
+    summary: 'Delete organizer and request',
+    description:
+      'Delete an approved organizer request and the associated user account (Admin only)',
+  })
+  async deleteOrganizer(
+    @Param('id') requestId: string,
+  ): Promise<ApproveRejectResponseDto> {
+    return this.adminService.deleteOrganizer(requestId);
+  }
 }

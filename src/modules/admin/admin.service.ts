@@ -197,4 +197,39 @@ export class AdminService {
       status: OrgRequestStatus.REJECTED,
     };
   }
+
+  /**
+   * Xóa organizer request và user account liên quan
+   */
+  async deleteOrganizer(requestId: string): Promise<ApproveRejectResponseDto> {
+    // Find request with user info
+    const request = await this.prisma.organizerRequest.findUnique({
+      where: { id: requestId },
+      include: { user: true },
+    });
+
+    if (!request) {
+      throw new NotFoundException(
+        `Organizer request with ID ${requestId} not found`,
+      );
+    }
+
+    // Use transaction to delete both user and request
+    await this.prisma.$transaction([
+      // Delete the user (this will cascade delete related records if set up)
+      this.prisma.user.delete({
+        where: { id: request.userId },
+      }),
+      // Delete the organizer request
+      this.prisma.organizerRequest.delete({
+        where: { id: requestId },
+      }),
+    ]);
+
+    return {
+      message: 'Organizer and associated user account deleted successfully',
+      requestId,
+      status: OrgRequestStatus.REJECTED,
+    };
+  }
 }
