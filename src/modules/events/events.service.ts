@@ -5,7 +5,6 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { GamificationService } from '../gamification/gamification.service';
 import { UploadService } from '../upload/upload.service';
 import {
   CreateEventDto,
@@ -13,7 +12,6 @@ import {
   GetEventsQueryDto,
   GetAllEventsQueryDto,
 } from './dto/create-event.dto';
-import { PointReason } from '@prisma/client';
 import type { Express } from 'express';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -79,7 +77,6 @@ function withDynamicStatus<T extends RawEvent>(event: T): T {
 export class EventsService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly gamificationService: GamificationService,
     private readonly uploadService: UploadService,
   ) {}
 
@@ -314,18 +311,10 @@ export class EventsService {
           },
         });
 
-        return { registration, eventPoints: event.points };
+        return { registration };
       },
       { isolationLevel: 'Serializable' },
     );
-
-    // Add points for joining event (outside transaction)
-    await this.gamificationService.addPoints({
-      userId,
-      amount: result.eventPoints,
-      reason: PointReason.JOIN_EVENT,
-      eventId,
-    });
 
     return result.registration;
   }
@@ -398,10 +387,7 @@ export class EventsService {
     if (!event) {
       throw new NotFoundException(`Event with id '${eventId}' not found.`);
     }
-    if (
-      requesterRole !== 'ADMIN' &&
-      event.organizerId !== requesterId
-    ) {
+    if (requesterRole !== 'ADMIN' && event.organizerId !== requesterId) {
       throw new BadRequestException(
         'You are not allowed to view participants of this event.',
       );
