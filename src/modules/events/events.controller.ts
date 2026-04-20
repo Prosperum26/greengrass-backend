@@ -152,6 +152,19 @@ export class EventsController {
     return ok(data);
   }
 
+  @Get(':id/registration')
+  @Roles('STUDENT', 'ORGANIZER')
+  async checkRegistration(
+    @Param('id') eventId: string,
+    @Req() req: AuthRequest,
+  ) {
+    const data = await this.eventsService.checkRegistration(
+      eventId,
+      req.user.sub,
+    );
+    return ok(data);
+  }
+
   @Get(':id/participants')
   @Roles('ORGANIZER', 'ADMIN')
   async getParticipants(@Param('id') eventId: string, @Req() req: AuthRequest) {

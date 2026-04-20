@@ -319,6 +319,27 @@ export class EventsService {
     return result.registration;
   }
 
+  async checkRegistration(eventId: string, userId: string) {
+    const event = await this.prisma.event.findUnique({
+      where: { id: eventId },
+      select: { id: true },
+    });
+
+    if (!event) {
+      throw new NotFoundException(`Event with id '${eventId}' not found.`);
+    }
+
+    const registration = await this.prisma.eventRegistration.findUnique({
+      where: { userId_eventId: { userId, eventId } },
+      select: { id: true, createdAt: true },
+    });
+
+    return {
+      registered: !!registration,
+      registeredAt: registration?.createdAt || null,
+    };
+  }
+
   async cancelRegistration(eventId: string, userId: string) {
     const event = await this.prisma.event.findUnique({
       where: { id: eventId },
