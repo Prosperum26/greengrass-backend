@@ -237,6 +237,58 @@ export class EventsService {
     return withDynamicStatus(updated);
   }
 
+  async updateCoverImage(
+    eventId: string,
+    userId: string,
+    coverImage: Express.Multer.File,
+  ) {
+    // Verify event exists and user is organizer
+    const event = await this.prisma.event.findUnique({
+      where: { id: eventId },
+      select: {
+        organizerId: true,
+        coverImagePublicId: true,
+      },
+    });
+
+    if (!event) {
+      throw new NotFoundException(`Event with id '${eventId}' not found.`);
+    }
+
+    if (event.organizerId !== userId) {
+      throw new BadRequestException(
+        'You are not allowed to modify this event.',
+      );
+    }
+
+    // Delete old cover image if exists
+    if (event.coverImagePublicId) {
+      try {
+        await this.uploadService.deleteImage(event.coverImagePublicId);
+      } catch {
+        // Ignore error if old image doesn't exist
+      }
+    }
+
+    // Upload new cover image
+    const uploadResult = await this.uploadService.uploadEventCover(
+      coverImage,
+      eventId,
+    );
+
+    // Update event with new cover image
+    const updated = await this.prisma.event.update({
+      where: { id: eventId },
+      data: {
+        coverImageUrl: uploadResult.url,
+        coverImagePublicId: uploadResult.publicId,
+      },
+      select: EVENT_SELECT,
+    });
+
+    return withDynamicStatus(updated);
+  }
+
   async getEventById(id: string) {
     const event = await this.prisma.event.findUnique({
       where: { id },

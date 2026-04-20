@@ -102,6 +102,27 @@ export class EventsController {
     return ok(data);
   }
 
+  @Patch(':id/cover')
+  @Roles('ORGANIZER')
+  @UseInterceptors(
+    FileInterceptor('coverImage', {
+      limits: { fileSize: MAX_FILE_SIZE },
+      fileFilter: imageFileFilter,
+    }),
+  )
+  async updateCoverImage(
+    @Param('id') eventId: string,
+    @Req() req: AuthRequest,
+    @UploadedFile() coverImage: Express.Multer.File,
+  ) {
+    const data = await this.eventsService.updateCoverImage(
+      eventId,
+      req.user.sub,
+      coverImage,
+    );
+    return ok(data);
+  }
+
   @Get(':id')
   @Public()
   async getEventById(@Param('id') id: string) {
