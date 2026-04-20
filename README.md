@@ -1,26 +1,26 @@
 # Greengrass Backend
 
-A production-ready NestJS backend for the Greengrass platform, focused on environmental events, check-in workflows, notifications, and gamification.
+Backend NestJS sẵn sàng cho sản xuất của nền tảng Greengrass, tập trung vào sự kiện môi trường, quy trình check-in, thông báo và gamification.
 
-## Project Overview
+## Tổng Quan Dự Án
 
-Greengrass Backend provides APIs for:
+Greengrass Backend cung cấp API cho:
 
-- User authentication and authorization (JWT + refresh token flow)
-- Event lifecycle management (create, browse, register, manage participants)
-- QR-based event check-in
-- Points, badges, streaks, and leaderboard
-- Notification delivery and reminder jobs
-- Map markers and nearby event discovery
-- Admin organizer-request management
+- Xác thực và phân quyền người dùng (JWT + luồng refresh token)
+- Quản lý vòng đời sự kiện (tạo, duyệt, đăng ký, quản lý người tham gia)
+- Check-in sự kiện dựa trên QR
+- Điểm, huy hiệu, streaks và bảng xếp hạng
+- Gửi thông báo và công việc nhắc nhở
+- Đánh dấu bản đồ và khám phá sự kiện lân cận
+- Quản lý yêu cầu người tổ chức cho admin
 
-This project is designed to support both local development and cloud deployment (Render).
+Dự án này được thiết kế để hỗ trợ cả phát triển cục bộ và triển khai đám mây (Render).
 
-## Tech Stack
+## Công Nghệ Sử Dụng
 
 - Runtime: Node.js 20+
 - Framework: NestJS 11
-- Language: TypeScript
+- Ngôn ngữ: TypeScript
 - Database: PostgreSQL
 - ORM: Prisma
 - Auth: Passport JWT + bcrypt
@@ -28,118 +28,118 @@ This project is designed to support both local development and cloud deployment 
 - Testing: Jest (unit + e2e)
 - CI/CD: GitHub Actions + Render Deploy Hook
 
-## Architecture
+## Kiến Trúc
 
-### Layering
+### Phân Lớp
 
-- `Controller` layer: HTTP routing and request/response handling
-- `Service` layer: business logic and orchestration
-- `Data access`: Prisma client via `PrismaService`
-- `Cross-cutting`: guards, decorators, filters, interceptors in `src/common`
+- Lớp `Controller`: Định tuyến HTTP và xử lý request/response
+- Lớp `Service`: Logic nghiệp vụ và điều phối
+- `Truy cập dữ liệu`: Prisma client qua `PrismaService`
+- `Cross-cutting`: guards, decorators, filters, interceptors trong `src/common`
 
-### Main Modules
+### Các Module Chính
 
-- `auth`: login/register/refresh/logout
-- `users`: profile and user stats
-- `events`: event CRUD, registration, participant view
-- `checkin`: QR generation and event check-in
-- `gamification`: points, badges, leaderboard
-- `notifications`: in-app notifications + scheduled reminders
-- `map`: map markers and nearby search
-- `admin`: organizer request review flow
-- `upload`: cloud image upload
-- `chatbot`: AI assistant integration
+- `auth`: đăng nhập/đăng ký/refresh/đăng xuất
+- `users`: hồ sơ và thống kê người dùng
+- `events`: event CRUD, đăng ký, xem người tham gia
+- `checkin`: tạo QR và check-in sự kiện
+- `gamification`: điểm, huy hiệu, bảng xếp hạng
+- `notifications`: thông báo trong ứng dụng + nhắc nhở theo lịch
+- `map`: đánh dấu bản đồ và tìm kiếm lân cận
+- `admin`: luồng xem xét yêu cầu người tổ chức
+- `upload`: upload ảnh lên đám mây
+- `chatbot`: tích hợp trợ lý AI
 
-### Data Flow (Typical Request)
+### Luồng Dữ Liệu (Request Điển Hình)
 
-1. Client sends request with/without JWT.
-2. Guards validate authentication/role (`JwtAuthGuard`, `RolesGuard`).
-3. DTO validation runs via global `ValidationPipe`.
-4. Controller delegates to Service.
-5. Service executes business logic and Prisma operations.
-6. Global filter/interceptor standardizes errors and logs.
+1. Client gửi request có/không có JWT.
+2. Guards xác thực authentication/role (`JwtAuthGuard`, `RolesGuard`).
+3. Xác thực DTO chạy qua `ValidationPipe` toàn cục.
+4. Controller ủy thác cho Service.
+5. Service thực thi logic nghiệp vụ và thao tác Prisma.
+6. Filter/interceptor toàn cục chuẩn hóa lỗi và logs.
 
-## Getting Started (Local)
+## Bắt Đầu (Môi Trường Cục Bộ)
 
-### Prerequisites
+### Yêu Cầu Trước
 
 - Node.js 20+
 - Yarn 1.22+
-- PostgreSQL running locally or remotely
+- PostgreSQL chạy cục bộ hoặc từ xa
 
-### 1) Install dependencies
+### 1) Cài đặt dependencies
 
 ```bash
 yarn install
 ```
 
-### 2) Configure environment
+### 2) Cấu hình môi trường
 
 ```bash
 cp .env.example .env
 ```
 
-Update required values in `.env` (at least `DATABASE_URL`, `JWT_SECRET`, `JWT_REFRESH_SECRET`, `QR_SECRET`, `ALLOWED_ORIGINS`).
+Cập nhật các giá trị bắt buộc trong `.env` (ít nhất `DATABASE_URL`, `JWT_SECRET`, `JWT_REFRESH_SECRET`, `QR_SECRET`, `ALLOWED_ORIGINS`).
 
-### 3) Run database migrations
+### 3) Chạy database migrations
 
 ```bash
 yarn db:migrate:deploy
 ```
 
-### 4) Start development server
+### 4) Khởi động server phát triển
 
 ```bash
 yarn start:dev
 ```
 
-Backend runs on `http://localhost:3000` by default.
+Backend chạy trên `http://localhost:3000` theo mặc định.
 
-## Production Setup
+## Thiết Lập Môi Trường Sản Xuất
 
-### Build and run
+### Build và chạy
 
 ```bash
 yarn build
 yarn start:prod
 ```
 
-### Render deployment
+### Triển khai Render
 
-This repository includes `render.yaml` with:
+Repository này bao gồm `render.yaml` với:
 
-- Build command: `yarn install --frozen-lockfile && yarn build`
-- Start command: `yarn db:migrate:deploy && yarn start:prod`
+- Lệnh build: `yarn install --frozen-lockfile && yarn build`
+- Lệnh start: `yarn db:migrate:deploy && yarn start:prod`
 
-Create a Render web service and connect the repository. Ensure all required environment variables are configured in Render.
+Tạo Render web service và kết nối repository. Đảm bảo tất cả các biến môi trường bắt buộc được cấu hình trong Render.
 
-## Environment Variables Guide
+## Hướng Dẫn Biến Môi Trường
 
-See `.env.example` for full list. Core required variables:
+Xem `.env.example` cho danh sách đầy đủ. Các biến bắt buộc cốt lõi:
 
-- `DATABASE_URL`: PostgreSQL connection string
-- `JWT_SECRET`: access token signing secret (min 32 chars recommended)
-- `JWT_REFRESH_SECRET`: refresh token signing secret (min 32 chars recommended)
-- `QR_SECRET`: check-in QR secret (min 16 chars recommended)
-- `ALLOWED_ORIGINS`: comma-separated allowed CORS origins
-- `NODE_ENV`: `development` or `production`
-- `PORT`: server port
+- `DATABASE_URL`: chuỗi kết nối PostgreSQL
+- `JWT_SECRET`: bí mật ký access token (khuyến nghị tối thiểu 32 ký tự)
+- `JWT_REFRESH_SECRET`: bí mật ký refresh token (khuyến nghị tối thiểu 32 ký tự)
+- `QR_SECRET`: bí mật QR check-in (khuyến nghị tối thiểu 16 ký tự)
+- `ALLOWED_ORIGINS`: các nguồn CORS được phép, phân tách bằng dấu phẩy
+- `NODE_ENV`: `development` hoặc `production`
+- `PORT`: cổng server
 
-Optional integrations:
+Tích hợp tùy chọn:
 
 - `GOOGLE_CLIENT_ID`
 - `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`
 - `GEMINI_API_KEY`
 
-## API Documentation (Basic)
+## Tài Liệu API (Cơ Bản)
 
 ### Swagger
 
-Swagger UI is enabled in development:
+Swagger UI được bật trong môi trường phát triển:
 
 - `GET /api`
 
-### Key endpoint groups
+### Các nhóm endpoint chính
 
 - Auth: `/auth/*`
 - Users: `/users/*`
@@ -150,22 +150,22 @@ Swagger UI is enabled in development:
 - Admin: `/admin/*`
 - Map: `/map/*`
 
-### Auth header format
+### Định dạng header Auth
 
 ```http
 Authorization: Bearer <access_token>
 ```
 
-## Testing
+## Kiểm Thử
 
-Run all test suites:
+Chạy tất cả các bộ kiểm thử:
 
 ```bash
 yarn test
 yarn test:e2e
 ```
 
-Additional test commands:
+Các lệnh kiểm thử bổ sung:
 
 ```bash
 yarn test:watch
@@ -174,40 +174,40 @@ yarn test:cov
 
 ## CI/CD
 
-### CI workflow
+### Quy trình CI
 
 File: `.github/workflows/ci.yml`
 
-On PR and push to `main`, CI runs:
+Khi PR và push lên `main`, CI chạy:
 
-1. Install dependencies
-2. Provision PostgreSQL service
-3. Run Prisma migrations
-4. Lint check (non-blocking currently)
-5. Unit tests
-6. E2E tests
+1. Cài đặt dependencies
+2. Cung cấp dịch vụ PostgreSQL
+3. Chạy Prisma migrations
+4. Kiểm tra lint (hiện không bắt buộc)
+5. Kiểm thử đơn vị
+6. Kiểm thử E2E
 7. Build
 
-### CD workflow (Render)
+### Quy trình CD (Render)
 
 File: `.github/workflows/deploy-render.yml`
 
-- Trigger: when CI workflow succeeds on `main`
-- Action: calls Render Deploy Hook via `RENDER_DEPLOY_HOOK_URL` GitHub secret
+- Trigger: khi quy trình CI thành công trên `main`
+- Hành động: gọi Render Deploy Hook qua GitHub secret `RENDER_DEPLOY_HOOK_URL`
 
-Required GitHub secret:
+GitHub secret bắt buộc:
 
 - `RENDER_DEPLOY_HOOK_URL`
 
-## Useful Scripts
+## Script Hữu Ích
 
-- `yarn start:dev`: run in watch mode
-- `yarn build`: compile TypeScript
-- `yarn start:prod`: run compiled server
-- `yarn db:migrate:deploy`: apply production-safe Prisma migrations
-- `yarn test`: unit tests
-- `yarn test:e2e`: e2e tests
+- `yarn start:dev`: chạy ở chế độ watch
+- `yarn build`: biên dịch TypeScript
+- `yarn start:prod`: chạy server đã biên dịch
+- `yarn db:migrate:deploy`: áp dụng Prisma migrations an toàn cho production
+- `yarn test`: kiểm thử đơn vị
+- `yarn test:e2e`: kiểm thử e2e
 
-## Contributing
+## Đóng Góp
 
-See `CONTRIBUTING.md` for development workflow, coding standards, and PR checklist.
+Xem `CONTRIBUTING.md` cho quy trình phát triển, tiêu chuẩn viết code và danh sách kiểm tra PR.

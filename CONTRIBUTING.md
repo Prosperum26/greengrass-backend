@@ -1,17 +1,17 @@
-# Contributing Guide
+# Hướng Dẫn Đóng Góp
 
-Thanks for contributing to Greengrass Backend.
+Cảm ơn bạn đã đóng góp cho Greengrass Backend.
 
-## Development Workflow
+## Quy Trình Phát Triển
 
-1. Fork or create a feature branch from `main`.
-2. Keep changes scoped to one concern per PR.
-3. Add/update tests for behavior changes.
-4. Run checks locally before pushing.
+1. Fork hoặc tạo nhánh tính năng từ `main`.
+2. Giữ các thay đổi tập trung vào một mối quan tâm cho mỗi PR.
+3. Thêm/cập nhật kiểm thử cho các thay đổi hành vi.
+4. Chạy kiểm tra cục bộ trước khi push.
 
-## Local Validation Checklist
+## Danh Sách Kiểm Tra Xác Thực Cục Bộ
 
-Run these commands before opening a PR:
+Chạy các lệnh sau trước khi mở PR:
 
 ```bash
 yarn test
@@ -19,45 +19,45 @@ yarn test:e2e
 yarn build
 ```
 
-Optional:
+Tùy chọn:
 
 ```bash
 yarn lint:check
 ```
 
-## Branch and Commit Recommendations
+## Khuyến Nghị Về Nhánh Và Commit
 
-- Branch naming:
-  - `feat/<feature-name>`
-  - `fix/<issue-name>`
-  - `chore/<task-name>`
-- Prefer small, focused commits with clear messages.
+- Đặt tên nhánh:
+  - `feat/<tên-tính-năng>`
+  - `fix/<tên-vấn-đề>`
+  - `chore/<tên-công-việc>`
+- Ưu tiên các commit nhỏ, tập trung với thông điệp rõ ràng.
 
-## Coding Standards
+## Tiêu Chuẩn Viết Code
 
-- Use TypeScript strict typing where possible.
-- Keep controller logic thin, business logic in services.
-- Validate external inputs via DTO + class-validator.
-- Reuse common guards/decorators/utils from `src/common`.
-- Avoid introducing duplicate infrastructure abstractions.
+- Sử dụng kiểu TypeScript nghiêm ngặt khi có thể.
+- Giữ logic controller mỏng, logic nghiệp vụ trong các service.
+- Xác thực đầu vào bên ngoài qua DTO + class-validator.
+- Tái sử dụng các guards/decorators/utils chung từ `src/common`.
+- Tránh tạo các tính trừu tượng hạ tầng trùng lặp.
 
-## Testing Expectations
+## Kỳ Vọng Kiểm Thử
 
-- Unit tests for service/controller behavior.
-- E2E tests for critical API paths.
-- Add regression tests when fixing bugs.
+- Kiểm thử đơn vị cho hành vi service/controller.
+- Kiểm thử E2E cho các đường dẫn API quan trọng.
+- Thêm kiểm thử hồi quy khi sửa lỗi.
 
-## Pull Request Checklist
+## Danh Sách Kiểm Tra Pull Request
 
-- [ ] Scope is clear and documented
-- [ ] Tests added/updated
-- [ ] `yarn test` passes
-- [ ] `yarn test:e2e` passes
-- [ ] `yarn build` passes
-- [ ] README/docs updated when API or setup changes
+- [ ] Phạm vi rõ ràng và được tài liệu hóa
+- [ ] Kiểm thử đã thêm/cập nhật
+- [ ] `yarn test` đạt
+- [ ] `yarn test:e2e` đạt
+- [ ] `yarn build` đạt
+- [ ] README/docs được cập nhật khi API hoặc thiết lập thay đổi
 
-## Security Notes
+## Lưu ý Bảo Mật
 
-- Never commit secrets.
-- Use `.env.example` as a template only.
-- Prefer secure defaults and explicit authorization checks.
+- Không commit các thông tin bí mật.
+- Chỉ sử dụng `.env.example` làm mẫu.
+- Ưu tiên cài đặt an toàn và kiểm tra ủy quyền rõ ràng.
