@@ -557,7 +557,7 @@ export class EventsService {
     return withDynamicStatus(updated);
   }
 
-  async deleteEvent(id: string, userId: string) {
+  async deleteEvent(id: string, userId: string, userRole?: string) {
     const event = await this.prisma.event.findUnique({
       where: { id },
       select: { organizerId: true },
@@ -567,7 +567,8 @@ export class EventsService {
       throw new NotFoundException(`Event with id '${id}' not found.`);
     }
 
-    if (event.organizerId !== userId) {
+    // Admin can delete any event, organizer can only delete their own events
+    if (userRole !== 'ADMIN' && event.organizerId !== userId) {
       throw new BadRequestException(
         'You are not allowed to delete this event.',
       );

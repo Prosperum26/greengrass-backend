@@ -104,8 +104,8 @@ model Event {
   galleryImages String[]
 
   // THÊM: Cột lưu ID người tổ chức
-  organizerId String
-  organizer   User        @relation("EventOrganizer", fields: [organizerId], references: [id])
+  organizerId String?
+  organizer   User?        @relation("EventOrganizer", fields: [organizerId], references: [id], onDelete: SetNull)
 
   eventRegistrations EventRegistration[]
   notifications      Notification[]

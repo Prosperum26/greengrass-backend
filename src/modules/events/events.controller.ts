@@ -142,9 +142,9 @@ export class EventsController {
   }
 
   @Delete(':id')
-  @Roles('ORGANIZER')
+  @Roles('ORGANIZER', 'ADMIN')
   async deleteEvent(@Param('id') id: string, @Req() req: AuthRequest) {
-    const data = await this.eventsService.deleteEvent(id, req.user.sub);
+    const data = await this.eventsService.deleteEvent(id, req.user.sub, req.user.role);
     return ok(data);
   }
 
@@ -174,7 +174,7 @@ export class EventsController {
   }
 
   @Get(':id/registration')
-  @Roles('STUDENT', 'ORGANIZER')
+  @Roles('STUDENT', 'ORGANIZER', 'ADMIN')
   async checkRegistration(
     @Param('id') eventId: string,
     @Req() req: AuthRequest,

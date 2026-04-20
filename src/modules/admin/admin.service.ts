@@ -214,17 +214,10 @@ export class AdminService {
       );
     }
 
-    // Use transaction to delete both user and request
-    await this.prisma.$transaction([
-      // Delete the user (this will cascade delete related records if set up)
-      this.prisma.user.delete({
-        where: { id: request.userId },
-      }),
-      // Delete the organizer request
-      this.prisma.organizerRequest.delete({
-        where: { id: requestId },
-      }),
-    ]);
+    // Delete the user - organizerRequest will be cascade deleted automatically
+    await this.prisma.user.delete({
+      where: { id: request.userId },
+    });
 
     return {
       message: 'Organizer and associated user account deleted successfully',

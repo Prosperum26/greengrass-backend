@@ -45,12 +45,12 @@ export class CheckinController {
    * @returns QR token response
    */
   @Get(':eventId/qr')
-  @Roles('ORGANIZER')
+  @Roles('ORGANIZER', 'ADMIN')
   async getQrToken(
     @Param('eventId', ParseUUIDPipe) eventId: string,
     @Req() req: RequestWithUser,
   ): Promise<QrResponseDto> {
-    return this.checkinService.generateQrToken(eventId, req.user.sub);
+    return this.checkinService.generateQrToken(eventId, req.user.sub, req.user.role);
   }
 
   /**
@@ -80,12 +80,12 @@ export class CheckinController {
    * @returns List of checked-in participants
    */
   @Get(':eventId/checked-in')
-  @Roles('ORGANIZER')
+  @Roles('ORGANIZER', 'ADMIN')
   async getCheckedInParticipants(
     @Param('eventId', ParseUUIDPipe) eventId: string,
     @Req() req: RequestWithUser,
   ): Promise<Array<{ userId: string; checkInTime: Date; status: string }>> {
-    return this.checkinService.getCheckedInParticipants(eventId, req.user.sub);
+    return this.checkinService.getCheckedInParticipants(eventId, req.user.sub, req.user.role);
   }
 
   /**
@@ -96,7 +96,7 @@ export class CheckinController {
    * @returns Check-in statistics
    */
   @Get(':eventId/check-in-stats')
-  @Roles('ORGANIZER')
+  @Roles('ORGANIZER', 'ADMIN')
   async getCheckInStats(
     @Param('eventId', ParseUUIDPipe) eventId: string,
     @Req() req: RequestWithUser,
@@ -106,6 +106,6 @@ export class CheckinController {
     completed: number;
     checkInRate: number;
   }> {
-    return this.checkinService.getCheckInStats(eventId, req.user.sub);
+    return this.checkinService.getCheckInStats(eventId, req.user.sub, req.user.role);
   }
 }

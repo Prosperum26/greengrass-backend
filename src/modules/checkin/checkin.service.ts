@@ -44,8 +44,9 @@ export class CheckinService {
   async generateQrToken(
     eventId: string,
     organizerId: string,
+    userRole?: string,
   ): Promise<QrResponseDto> {
-    await this.ensureOrganizerOwnsEvent(eventId, organizerId);
+    await this.ensureOrganizerOwnsEvent(eventId, organizerId, userRole);
 
     const qrToken = QrUtil.generateQrToken(eventId, this.qrSecret);
     const now = new Date();
@@ -177,8 +178,9 @@ export class CheckinService {
   async getCheckedInParticipants(
     eventId: string,
     organizerId: string,
+    userRole?: string,
   ): Promise<Array<{ userId: string; checkInTime: Date; status: string }>> {
-    await this.ensureOrganizerOwnsEvent(eventId, organizerId);
+    await this.ensureOrganizerOwnsEvent(eventId, organizerId, userRole);
 
     const checkedInRegistrations = await this.prisma.eventRegistration.findMany(
       {
@@ -213,13 +215,17 @@ export class CheckinService {
    * @param eventId - The event ID
    * @returns Check-in statistics
    */
-  async getCheckInStats(eventId: string, organizerId: string): Promise<{
+  async getCheckInStats(
+    eventId: string,
+    organizerId: string,
+    userRole?: string,
+  ): Promise<{
     totalRegistered: number;
     checkedIn: number;
     completed: number;
     checkInRate: number;
   }> {
-    await this.ensureOrganizerOwnsEvent(eventId, organizerId);
+    await this.ensureOrganizerOwnsEvent(eventId, organizerId, userRole);
 
     const [totalRegistered, checkedIn, completed] = await Promise.all([
       this.prisma.eventRegistration.count({
@@ -249,6 +255,7 @@ export class CheckinService {
   private async ensureOrganizerOwnsEvent(
     eventId: string,
     organizerId?: string,
+    userRole?: string,
   ) {
     const event = await this.prisma.event.findUnique({
       where: { id: eventId },
@@ -260,7 +267,8 @@ export class CheckinService {
     if (!event) {
       throw new NotFoundException(`Event with ID ${eventId} not found`);
     }
-    if (organizerId && event.organizerId !== organizerId) {
+    // Admin can access any event, organizer can only access their own events
+    if (organizerId && userRole !== 'ADMIN' && event.organizerId !== organizerId) {
       throw new BadRequestException(
         'You are not allowed to access this event check-in data',
       );
