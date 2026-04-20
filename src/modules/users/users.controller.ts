@@ -57,6 +57,11 @@ export class UsersController {
     return this.usersService.getMyEvents(req.user.sub);
   }
 
+  @Get('me/organized-events')
+  async getMyOrganizedEvents(@Req() req: RequestWithUser) {
+    return this.usersService.getMyOrganizedEvents(req.user.sub);
+  }
+
   @Get('me/points')
   async getMyPoints(@Req() req: RequestWithUser) {
     return this.usersService.getMyPoints(req.user.sub);

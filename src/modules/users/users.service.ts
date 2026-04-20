@@ -58,6 +58,7 @@ export class UsersService {
   }
 
   async getMyEvents(userId: string) {
+    // Lấy events user đã đăng ký tham gia
     const registrations = await this.prisma.eventRegistration.findMany({
       where: { userId },
       include: {
@@ -84,6 +85,28 @@ export class UsersService {
       registeredAt: reg.createdAt,
       event: reg.event,
     }));
+  }
+
+  async getMyOrganizedEvents(userId: string) {
+    // Lấy events do organizer tạo (dựa trên organizerId)
+    const events = await this.prisma.event.findMany({
+      where: { organizerId: userId },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        location: true,
+        startTime: true,
+        endTime: true,
+        status: true,
+        points: true,
+        coverImageUrl: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return events;
   }
 
   async getMyPoints(userId: string) {
