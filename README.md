@@ -87,7 +87,13 @@ Cập nhật các giá trị bắt buộc trong `.env` (ít nhất `DATABASE_URL
 yarn db:migrate:deploy
 ```
 
-### 4) Khởi động server phát triển
+### 4) Seed dữ liệu (tạo admin account)
+
+```bash
+yarn seed
+```
+
+### 5) Khởi động server phát triển
 
 ```bash
 yarn start:dev
@@ -124,6 +130,9 @@ Xem `.env.example` cho danh sách đầy đủ. Các biến bắt buộc cốt l
 - `ALLOWED_ORIGINS`: các nguồn CORS được phép, phân tách bằng dấu phẩy
 - `NODE_ENV`: `development` hoặc `production`
 - `PORT`: cổng server
+- `ADMIN_EMAIL`: email admin account (cho seed)
+- `ADMIN_PASSWORD`: mật khẩu admin account (cho seed)
+- `ADMIN_FULL_NAME`: tên đầy đủ admin account (cho seed)
 
 Tích hợp tùy chọn:
 
