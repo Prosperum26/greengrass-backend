@@ -106,12 +106,15 @@ export class EventsService {
       where.startTime = range;
     }
 
+    const sortBy = query.sortBy ?? 'startTime';
+    const sortOrder = query.sortOrder ?? 'asc';
+
     const [total, rawItems] = await Promise.all([
       this.prisma.event.count({ where }),
       this.prisma.event.findMany({
         where,
         select: EVENT_SELECT,
-        orderBy: { startTime: 'asc' },
+        orderBy: { [sortBy]: sortOrder },
         skip,
         take: limit,
       }),
