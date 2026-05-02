@@ -31,7 +31,8 @@ export class AuthModule implements OnModuleInit {
 
   onModuleInit(): void {
     const jwtSecret = this.configService.get<string>('JWT_SECRET');
-    const jwtRefreshSecret = this.configService.get<string>('JWT_REFRESH_SECRET');
+    const jwtRefreshSecret =
+      this.configService.get<string>('JWT_REFRESH_SECRET');
     const qrSecret = this.configService.get<string>('QR_SECRET');
 
     if (!jwtSecret || jwtSecret.length < 32) {

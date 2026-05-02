@@ -11,11 +11,11 @@
 
 import { PrismaService } from '../../modules/prisma/prisma.service';
 
-type AsyncFn = (...args: any[]) => Promise<any>;
+type AsyncFn = (...args: unknown[]) => Promise<unknown>;
 type AsyncMethodKeys<T> = {
   [K in keyof T]: T[K] extends AsyncFn ? K : never;
 }[keyof T];
-type AsyncMethodReturn<T> = T extends (...args: any[]) => Promise<infer R>
+type AsyncMethodReturn<T> = T extends (...args: unknown[]) => Promise<infer R>
   ? R
   : never;
 
@@ -75,12 +75,12 @@ export function createMockPrismaService(): jest.Mocked<PrismaService> {
       findFirst: jest.fn(),
       create: jest.fn(),
     },
-    $transaction: jest.fn((args) => {
+    $transaction: jest.fn((args: unknown) => {
       // Support both array and callback styles
       if (Array.isArray(args)) {
-        return Promise.all(args);
+        return Promise.all(args as Array<Promise<unknown>>);
       }
-      return args(this);
+      return (args as (prisma: unknown) => unknown)(this);
     }),
   } as unknown as jest.Mocked<PrismaService>;
 }

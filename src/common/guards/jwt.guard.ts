@@ -10,7 +10,9 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
   }
 
   // Check route có @Public() hay không
-  canActivate(context: ExecutionContext): boolean | Promise<boolean> | any {
+  canActivate(
+    context: ExecutionContext,
+  ): boolean | Promise<boolean> | undefined {
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
       context.getHandler(),
       context.getClass(),

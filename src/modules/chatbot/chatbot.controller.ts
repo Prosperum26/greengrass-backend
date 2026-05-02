@@ -7,8 +7,12 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
-import { ChatbotService, ChatMessageDto, ChatResponse } from './chatbot.service';
+import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import {
+  ChatbotService,
+  ChatMessageDto,
+  ChatResponse,
+} from './chatbot.service';
 import { JwtAuthGuard } from '../../common/guards/jwt.guard';
 import { Public } from '../../common/decorators/public.decorator';
 
@@ -23,7 +27,8 @@ export class ChatbotController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Chat với AI Assistant',
-    description: 'Gửi tin nhắn và nhận phản hồi từ AI chatbot hỗ trợ về môi trường và nền tảng Greengrass',
+    description:
+      'Gửi tin nhắn và nhận phản hồi từ AI chatbot hỗ trợ về môi trường và nền tảng Greengrass',
   })
   async chat(
     @Body() dto: ChatMessageDto,
@@ -36,10 +41,11 @@ export class ChatbotController {
   @Get('recommendations')
   @ApiOperation({
     summary: 'Gợi ý sự kiện và hoạt động',
-    description: 'Nhận các gợi ý cá nhân hóa về sự kiện và hoạt động môi trường',
+    description:
+      'Nhận các gợi ý cá nhân hóa về sự kiện và hoạt động môi trường',
   })
-  async getRecommendations(): Promise<{ success: true; data: string[] }> {
-    const data = await this.chatbotService.getRecommendations();
+  getRecommendations(): { success: true; data: string[] } {
+    const data = this.chatbotService.getRecommendations();
     return { success: true, data };
   }
 }

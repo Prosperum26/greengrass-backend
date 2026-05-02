@@ -117,7 +117,10 @@ describe('CheckinService', () => {
     it('should generate QR token successfully', async () => {
       mockPrismaService.event.findUnique.mockResolvedValue(mockEvent);
 
-      const result = await service.generateQrToken(mockEventId, mockOrganizerId);
+      const result = await service.generateQrToken(
+        mockEventId,
+        mockOrganizerId,
+      );
 
       expect(result).toHaveProperty('eventId', mockEventId);
       expect(result).toHaveProperty('qrToken');
@@ -138,9 +141,7 @@ describe('CheckinService', () => {
 
       await expect(
         service.generateQrToken(mockEventId, mockOrganizerId),
-      ).rejects.toThrow(
-        NotFoundException,
-      );
+      ).rejects.toThrow(NotFoundException);
     });
   });
 

@@ -144,7 +144,9 @@ export class GetEventsQueryDto {
     default: 1,
   })
   @IsOptional()
-  @Transform(({ value }) => parseInt(value, 10))
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? parseInt(value, 10) : Number(value),
+  )
   @IsInt()
   @Min(1)
   page: number = 1;
@@ -157,7 +159,9 @@ export class GetEventsQueryDto {
     default: 10,
   })
   @IsOptional()
-  @Transform(({ value }) => parseInt(value, 10))
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? parseInt(value, 10) : Number(value),
+  )
   @IsInt()
   @Min(1)
   @Max(100)
@@ -191,7 +195,9 @@ export class GetAllEventsQueryDto {
     default: 1,
   })
   @IsOptional()
-  @Transform(({ value }) => parseInt(value, 10))
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? parseInt(value, 10) : Number(value),
+  )
   @IsInt()
   @Min(1)
   page: number = 1;
@@ -204,7 +210,9 @@ export class GetAllEventsQueryDto {
     default: 10,
   })
   @IsOptional()
-  @Transform(({ value }) => parseInt(value, 10))
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? parseInt(value, 10) : Number(value),
+  )
   @IsInt()
   @Min(1)
   @Max(100)

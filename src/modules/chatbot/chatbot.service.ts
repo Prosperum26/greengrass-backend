@@ -15,8 +15,8 @@ export interface ChatResponse {
 @Injectable()
 export class ChatbotService {
   private readonly logger = new Logger(ChatbotService.name);
-  private genAI: GoogleGenerativeAI;
-  private model: GenerativeModel;
+  private genAI: GoogleGenerativeAI | undefined;
+  private model: GenerativeModel | undefined;
 
   private readonly primaryModelName = 'gemini-1.5-flash';
   private readonly fallbackModelName = 'gemini-1.5-flash-latest';
@@ -27,15 +27,21 @@ export class ChatbotService {
     if (apiKey && apiKey !== 'your-gemini-api-key') {
       try {
         this.genAI = new GoogleGenerativeAI(apiKey);
-        this.model = this.genAI.getGenerativeModel({ model: this.primaryModelName });
-        this.logger.log(`Chatbot initialized with model: ${this.primaryModelName}`);
+        this.model = this.genAI.getGenerativeModel({
+          model: this.primaryModelName,
+        });
+        this.logger.log(
+          `Chatbot initialized with model: ${this.primaryModelName}`,
+        );
       } catch (initError) {
         this.logger.error('Failed to initialize Gemini API:', initError);
-        this.genAI = undefined as any;
-        this.model = undefined as any;
+        this.genAI = undefined;
+        this.model = undefined;
       }
     } else {
-      this.logger.warn('GEMINI_API_KEY not configured or using placeholder value, chatbot will return mock responses');
+      this.logger.warn(
+        'GEMINI_API_KEY not configured or using placeholder value, chatbot will return mock responses',
+      );
     }
   }
 
@@ -53,7 +59,7 @@ export class ChatbotService {
     }
 
     if (!this.genAI || !this.model) {
-      return this.getMockResponse(sanitizedMessage);
+      return this.getMockResponse();
     }
 
     try {
@@ -76,19 +82,22 @@ Context: Greengrass có các tính năng:
       if (dto.history && dto.history.length > 0) {
         // Gemini API requires history to start with 'user' role
         // Filter out any 'model' messages at the start of history
-        let validHistory = [...dto.history];
+        const validHistory = [...dto.history];
         while (validHistory.length > 0 && validHistory[0].role === 'model') {
           validHistory.shift();
         }
-        
+
         // Also ensure no consecutive same-role messages
         const dedupedHistory: typeof validHistory = [];
         for (const msg of validHistory) {
-          if (dedupedHistory.length === 0 || dedupedHistory[dedupedHistory.length - 1].role !== msg.role) {
+          if (
+            dedupedHistory.length === 0 ||
+            dedupedHistory[dedupedHistory.length - 1].role !== msg.role
+          ) {
             dedupedHistory.push(msg);
           }
         }
-        
+
         if (dedupedHistory.length > 0) {
           const formattedHistory = dedupedHistory.map((h) => ({
             role: h.role,
@@ -105,40 +114,57 @@ Context: Greengrass có các tính năng:
       }
 
       const fullPrompt = `${systemPrompt}\n\nUser: ${dto.message}`;
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
       const result = await chat.sendMessage(fullPrompt);
-      const response = result.response.text();
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+      const response = result.response.text() as string;
 
-      this.logger.log(`Chat response generated for message: ${dto.message.substring(0, 50)}...`);
+      this.logger.log(
+        `Chat response generated for message: ${dto.message.substring(0, 50)}...`,
+      );
 
       return {
         response: response,
         timestamp: new Date(),
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Detailed error logging for debugging
+      const errorObj = error as {
+        message?: string;
+        code?: string;
+        status?: string;
+        details?: unknown;
+        response?: { data?: unknown };
+        stack?: string;
+      };
       this.logger.error('Error calling Gemini API:', {
-        errorMessage: error?.message,
-        errorCode: error?.code,
-        errorStatus: error?.status,
-        errorDetails: error?.details,
-        responseData: error?.response?.data,
-        stack: error?.stack,
+        errorMessage: errorObj.message,
+        errorCode: errorObj.code,
+        errorStatus: errorObj.status,
+        errorDetails: errorObj.details,
+        responseData: errorObj.response?.data,
+        stack: errorObj.stack,
       });
-      
+
       // Check for specific error types
-      if (error?.message?.includes('API key not valid')) {
+      if (errorObj.message?.includes('API key not valid')) {
         this.logger.error('GEMINI_API_KEY is invalid or expired');
-      } else if (error?.message?.includes('quota')) {
+      } else if (errorObj.message?.includes('quota')) {
         this.logger.error('Gemini API quota exceeded');
-      } else if (error?.message?.includes('model') || error?.message?.includes('not found')) {
-        this.logger.error('Model gemini-1.5-flash may not be available. Try using gemini-pro or check region availability.');
+      } else if (
+        errorObj.message?.includes('model') ||
+        errorObj.message?.includes('not found')
+      ) {
+        this.logger.error(
+          'Model gemini-1.5-flash may not be available. Try using gemini-pro or check region availability.',
+        );
       }
-      
-      return this.getMockResponse(dto.message);
+
+      return this.getMockResponse();
     }
   }
 
-  async getRecommendations(): Promise<string[]> {
+  getRecommendations(): string[] {
     const recommendations = [
       'Tham gia sự kiện trồng cây xanh tại công viên gần bạn',
       'Tham gia chiến dịch dọn rác bãi biển cuối tuần này',
@@ -161,6 +187,7 @@ Context: Greengrass có các tính năng:
     return (
       input
         // Remove control characters (Unicode ranges)
+        // eslint-disable-next-line no-control-regex
         .replace(/[\u0000-\u001F\u007F-\u009F]/g, '')
         // Remove potential prompt injection markers
         .replace(/system:|assistant:|user:|human:/gi, '')
@@ -171,7 +198,7 @@ Context: Greengrass có các tính năng:
     );
   }
 
-  private getMockResponse(_message: string): ChatResponse {
+  private getMockResponse(): ChatResponse {
     const responses = [
       'Cảm ơn bạn đã quan tâm đến môi trường! Bạn có thể tham gia các sự kiện trồng cây hoặc dọn rác trên nền tảng Greengrass để đóng góp cho cộng đồng.',
       'Chào bạn! Greengrass là nền tảng kết nối những người yêu môi trường. Bạn có thể đăng ký sự kiện, check-in và tích điểm để nhận các huy hiệu xanh.',

@@ -268,7 +268,11 @@ export class CheckinService {
       throw new NotFoundException(`Event with ID ${eventId} not found`);
     }
     // Admin can access any event, organizer can only access their own events
-    if (organizerId && userRole !== 'ADMIN' && event.organizerId !== organizerId) {
+    if (
+      organizerId &&
+      userRole !== 'ADMIN' &&
+      event.organizerId !== organizerId
+    ) {
       throw new BadRequestException(
         'You are not allowed to access this event check-in data',
       );

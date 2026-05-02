@@ -10,6 +10,13 @@ import {
 } from './interfaces/user-stats.interface';
 import { PaginationDto } from './dto/pagination.dto';
 
+interface BadgeConfig {
+  name: string;
+  description: string;
+  pointThreshold: number;
+  iconUrl: string;
+}
+
 @Injectable()
 export class GamificationService {
   private readonly logger = new Logger(GamificationService.name);
@@ -25,7 +32,7 @@ export class GamificationService {
   };
 
   // Default badges configuration
-  private readonly DEFAULT_BADGES = [
+  private readonly DEFAULT_BADGES: BadgeConfig[] = [
     {
       name: 'Green Beginner',
       description: 'Earned 100 points',

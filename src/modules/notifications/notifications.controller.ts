@@ -11,8 +11,16 @@ import {
   InternalServerErrorException,
   Logger,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
-import { NotificationsService, NotificationData } from './notifications.service';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiParam,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
+import {
+  NotificationsService,
+  NotificationData,
+} from './notifications.service';
 import { JwtAuthGuard } from '../../common/guards/jwt.guard';
 import { AuthenticatedRequest, ApiSuccessResponse } from '../../common/types';
 import { success, deleted } from '../../common/utils';
@@ -35,8 +43,9 @@ export class NotificationsController {
   async getNotifications(
     @Req() req: AuthenticatedRequest,
   ): Promise<ApiSuccessResponse<NotificationData[]>> {
-    const data =
-      await this.notificationsService.getUserNotifications(req.user.sub);
+    const data = await this.notificationsService.getUserNotifications(
+      req.user.sub,
+    );
     return success(data);
   }
 
@@ -49,11 +58,18 @@ export class NotificationsController {
     @Req() req: AuthenticatedRequest,
   ): Promise<ApiSuccessResponse<{ count: number }>> {
     try {
-      const count = await this.notificationsService.getUnreadCount(req.user.sub);
+      const count = await this.notificationsService.getUnreadCount(
+        req.user.sub,
+      );
       return success({ count });
     } catch (error) {
-      this.logger.error(`Error getting unread count for user ${req.user.sub}:`, error);
-      throw new InternalServerErrorException('Không thể lấy số thông báo chưa đọc');
+      this.logger.error(
+        `Error getting unread count for user ${req.user.sub}:`,
+        error,
+      );
+      throw new InternalServerErrorException(
+        'Không thể lấy số thông báo chưa đọc',
+      );
     }
   }
 

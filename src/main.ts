@@ -4,7 +4,8 @@ import { AppModule } from './app.module';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
-import rateLimit from 'express-rate-limit';
+import rateLimit, { RateLimitRequestHandler } from 'express-rate-limit';
+import type { Request, Response } from 'express';
 import { ConfigService } from '@nestjs/config';
 import { WinstonModule } from 'nest-winston';
 import { GlobalExceptionFilter } from './common/filters';
@@ -55,13 +56,13 @@ async function bootstrap() {
   );
 
   // Security: Rate limiting
-  const limiter = rateLimit({
+  const limiter: RateLimitRequestHandler = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 1000, // Higher limit for local development traffic
-    skip: (req) => req.method === 'OPTIONS',
+    skip: (req: Request) => req.method === 'OPTIONS',
     standardHeaders: true,
     legacyHeaders: false,
-    handler: (req, res) => {
+    handler: (req: Request, res: Response) => {
       res.status(429).json({
         success: false,
         message: 'Too many requests, please try again later.',
@@ -71,14 +72,14 @@ async function bootstrap() {
   app.use(limiter);
 
   // Security: Stricter rate limiting for auth endpoints
-  const authLimiter = rateLimit({
+  const authLimiter: RateLimitRequestHandler = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 5, // 5 attempts per 15 minutes
     skipSuccessfulRequests: true, // Don't count successful logins
-    skip: (req) => req.method === 'OPTIONS',
+    skip: (req: Request) => req.method === 'OPTIONS',
     standardHeaders: true,
     legacyHeaders: false,
-    handler: (req, res) => {
+    handler: (req: Request, res: Response) => {
       res.status(429).json({
         success: false,
         message: 'Too many authentication attempts, please try again later.',
@@ -98,7 +99,10 @@ async function bootstrap() {
     /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/i;
 
   app.enableCors({
-    origin: (origin, callback) => {
+    origin: (
+      origin: string | undefined,
+      callback: (err: Error | null, allow?: boolean) => void,
+    ) => {
       // Allow requests with no origin (mobile apps, curl, etc)
       if (!origin) {
         callback(null, true);
@@ -156,4 +160,4 @@ async function bootstrap() {
     logger.log(`Swagger Docs is running on: ${await app.getUrl()}/api`);
   }
 }
-bootstrap();
+void bootstrap();
