@@ -15,7 +15,7 @@ export interface OrganizerRequestDto {
   fullName: string;
   password: string;
   organizationName: string;
-  description: string;
+  description?: string;
 }
 
 @Injectable()
