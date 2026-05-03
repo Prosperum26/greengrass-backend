@@ -153,7 +153,7 @@ export class AuthService {
     // Access token
     const accessToken = this.jwtService.sign(payload, {
       secret: jwtSecret,
-      expiresIn: '15m',
+      expiresIn: '30m',
     });
 
     // Refresh token
