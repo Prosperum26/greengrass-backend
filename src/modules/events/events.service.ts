@@ -386,12 +386,14 @@ export class EventsService {
 
     const registration = await this.prisma.eventRegistration.findUnique({
       where: { userId_eventId: { userId, eventId } },
-      select: { id: true, createdAt: true },
+      select: { id: true, createdAt: true, status: true, checkInTime: true },
     });
 
     return {
       registered: !!registration,
       registeredAt: registration?.createdAt || null,
+      status: registration?.status || null,
+      checkInTime: registration?.checkInTime || null,
     };
   }
 
@@ -420,11 +422,18 @@ export class EventsService {
 
     const registration = await this.prisma.eventRegistration.findUnique({
       where: { userId_eventId: { userId, eventId } },
-      select: { id: true },
+      select: { id: true, status: true },
     });
 
     if (!registration) {
       throw new NotFoundException('You are not registered for this event.');
+    }
+
+    // Prevent cancellation if already checked in
+    if (registration.status === 'CHECKED_IN') {
+      throw new BadRequestException(
+        'Cannot cancel registration after check-in.',
+      );
     }
 
     await this.prisma.eventRegistration.delete({
