@@ -12,7 +12,7 @@
  */
 
 import { Injectable } from '@nestjs/common';
-import { createNamespace, Namespace, Context } from 'cls-hooked';
+import { createNamespace, Namespace } from 'cls-hooked';
 import { randomUUID } from 'crypto';
 
 const CORRELATION_NAMESPACE = 'correlation';
@@ -43,9 +43,10 @@ export class CorrelationService {
     const id = correlationId ?? this.generateId();
 
     // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-    return this.namespace.runAndReturn((context: Context) => {
+    return this.namespace.runAndReturn(() => {
+      // Use namespace.set() to store in the active context
       // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-      context.set(CORRELATION_ID_KEY, id);
+      this.namespace.set(CORRELATION_ID_KEY, id);
       return fn();
     });
   }
@@ -55,11 +56,9 @@ export class CorrelationService {
    * Returns undefined if not in a correlation context
    */
   getId(): string | undefined {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-    const context = this.namespace.active;
-    if (!context) return undefined;
+    // Use namespace.get() to retrieve from the active context
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-    return context.get(CORRELATION_ID_KEY) as string | undefined;
+    return this.namespace.get(CORRELATION_ID_KEY) as string | undefined;
   }
 
   /**
@@ -67,11 +66,8 @@ export class CorrelationService {
    * Use with caution - prefer runWithId for proper scoping
    */
   setId(id: string): void {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-    const context = this.namespace.active;
-    if (context) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-      context.set(CORRELATION_ID_KEY, id);
-    }
+    // Use namespace.set() to store in the active context
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+    this.namespace.set(CORRELATION_ID_KEY, id);
   }
 }
