@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Role, ROLES_KEY } from '../decorators/roles.decorator';
+import { AuthenticatedRequest } from '../../../common/types';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
@@ -23,7 +24,7 @@ export class RolesGuard implements CanActivate {
       return true;
     }
 
-    const { user } = context.switchToHttp().getRequest();
+    const { user } = context.switchToHttp().getRequest<AuthenticatedRequest>();
 
     if (!user) {
       throw new UnauthorizedException('No authenticated user found.');

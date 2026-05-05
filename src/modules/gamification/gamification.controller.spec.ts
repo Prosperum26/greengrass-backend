@@ -1,5 +1,9 @@
+/* eslint-disable @typescript-eslint/unbound-method */
 import { Test, TestingModule } from '@nestjs/testing';
-import { GamificationController } from './gamification.controller';
+import {
+  GamificationController,
+  RequestWithUser,
+} from './gamification.controller';
 import { GamificationService } from './gamification.service';
 import { PointReason } from '@prisma/client';
 
@@ -18,7 +22,10 @@ describe('GamificationController', () => {
     checkAndAssignBadges: jest.fn(),
     updateStreak: jest.fn(),
   };
-  const mockReq = { user: { sub: 'user-123' } };
+
+  const mockReq = {
+    user: { sub: 'user-123', email: 'test@test.com', role: 'STUDENT' },
+  } as unknown as RequestWithUser;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -55,7 +62,7 @@ describe('GamificationController', () => {
       };
       mockGamificationService.getUserStats.mockResolvedValue(mockStats);
 
-      const result = await controller.getMyPoints(mockReq as any);
+      const result = await controller.getMyPoints(mockReq);
 
       expect(result).toEqual(mockStats);
       expect(service.getUserStats).toHaveBeenCalledWith('user-123');
@@ -79,10 +86,13 @@ describe('GamificationController', () => {
       mockGamificationService.getPointHistory.mockResolvedValue(mockHistory);
 
       const pagination = { page: 1, limit: 20 };
-      const result = await controller.getPointHistory(mockReq as any, pagination);
+      const result = await controller.getPointHistory(mockReq, pagination);
 
       expect(result).toEqual(mockHistory);
-      expect(service.getPointHistory).toHaveBeenCalledWith('user-123', pagination);
+      expect(service.getPointHistory).toHaveBeenCalledWith(
+        'user-123',
+        pagination,
+      );
     });
   });
 
@@ -147,7 +157,7 @@ describe('GamificationController', () => {
       ];
       mockGamificationService.getUserBadges.mockResolvedValue(mockUserBadges);
 
-      const result = await controller.getMyBadges(mockReq as any);
+      const result = await controller.getMyBadges(mockReq);
 
       expect(result).toEqual(mockUserBadges);
       expect(service.getUserBadges).toHaveBeenCalledWith('user-123');
@@ -158,7 +168,7 @@ describe('GamificationController', () => {
     it('should return user rank', async () => {
       mockGamificationService.getUserRank.mockResolvedValue(5);
 
-      const result = await controller.getUserRank(mockReq as any);
+      const result = await controller.getUserRank(mockReq);
 
       expect(result).toEqual({ userId: 'user-123', rank: 5 });
       expect(service.getUserRank).toHaveBeenCalledWith('user-123');
@@ -194,9 +204,12 @@ describe('GamificationController', () => {
     it('should trigger badge check', async () => {
       mockGamificationService.checkAndAssignBadges.mockResolvedValue(undefined);
 
-      const result = await controller.checkBadges(mockReq as any);
+      const result = await controller.checkBadges(mockReq);
 
-      expect(result).toEqual({ success: true, message: 'Badge check completed' });
+      expect(result).toEqual({
+        success: true,
+        message: 'Badge check completed',
+      });
       expect(service.checkAndAssignBadges).toHaveBeenCalledWith('user-123');
     });
   });
@@ -205,7 +218,7 @@ describe('GamificationController', () => {
     it('should update user streak', async () => {
       mockGamificationService.updateStreak.mockResolvedValue(7);
 
-      const result = await controller.updateStreak(mockReq as any);
+      const result = await controller.updateStreak(mockReq);
 
       expect(result).toEqual({ userId: 'user-123', currentStreak: 7 });
       expect(service.updateStreak).toHaveBeenCalledWith('user-123');

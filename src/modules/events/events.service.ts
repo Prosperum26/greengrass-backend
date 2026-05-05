@@ -87,8 +87,17 @@ export class EventsService {
 
     const where: Record<string, unknown> = {};
 
+    // Filter by dynamic status (derived from actual time, not stored status)
     if (query.status) {
-      where.status = query.status;
+      const now = new Date();
+      if (query.status === EventStatus.COMPLETED) {
+        where.endTime = { lt: now };
+      } else if (query.status === EventStatus.UPCOMING) {
+        where.startTime = { gt: now };
+      } else if (query.status === EventStatus.ONGOING) {
+        where.startTime = { lte: now };
+        where.endTime = { gte: now };
+      }
     }
 
     if (query.keyword) {
@@ -106,12 +115,15 @@ export class EventsService {
       where.startTime = range;
     }
 
+    const sortBy = query.sortBy ?? 'startTime';
+    const sortOrder = query.sortOrder ?? 'asc';
+
     const [total, rawItems] = await Promise.all([
       this.prisma.event.count({ where }),
       this.prisma.event.findMany({
         where,
         select: EVENT_SELECT,
-        orderBy: { startTime: 'asc' },
+        orderBy: { [sortBy]: sortOrder },
         skip,
         take: limit,
       }),
@@ -383,12 +395,14 @@ export class EventsService {
 
     const registration = await this.prisma.eventRegistration.findUnique({
       where: { userId_eventId: { userId, eventId } },
-      select: { id: true, createdAt: true },
+      select: { id: true, createdAt: true, status: true, checkInTime: true },
     });
 
     return {
       registered: !!registration,
       registeredAt: registration?.createdAt || null,
+      status: registration?.status || null,
+      checkInTime: registration?.checkInTime || null,
     };
   }
 
@@ -417,11 +431,18 @@ export class EventsService {
 
     const registration = await this.prisma.eventRegistration.findUnique({
       where: { userId_eventId: { userId, eventId } },
-      select: { id: true },
+      select: { id: true, status: true },
     });
 
     if (!registration) {
       throw new NotFoundException('You are not registered for this event.');
+    }
+
+    // Prevent cancellation if already checked in
+    if (registration.status === 'CHECKED_IN') {
+      throw new BadRequestException(
+        'Cannot cancel registration after check-in.',
+      );
     }
 
     await this.prisma.eventRegistration.delete({

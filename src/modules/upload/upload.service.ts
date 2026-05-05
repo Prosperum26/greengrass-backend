@@ -227,13 +227,16 @@ export class UploadService {
   }> {
     try {
       // Test by getting cloudinary account info (ping)
-      const result = await cloudinary.api.ping();
+      interface CloudinaryPingResponse {
+        status: string;
+      }
+      const result = (await cloudinary.api.ping()) as CloudinaryPingResponse;
 
       return {
         success: true,
         message: 'Cloudinary connection successful',
         cloudName: this.configService.get<string>('CLOUDINARY_CLOUD_NAME'),
-        status: result.status as string,
+        status: result.status,
       };
     } catch (error) {
       const errorMessage =

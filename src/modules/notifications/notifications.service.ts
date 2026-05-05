@@ -68,7 +68,9 @@ export class NotificationsService {
     });
   }
 
-  async createNotification(dto: CreateNotificationDto): Promise<NotificationData> {
+  async createNotification(
+    dto: CreateNotificationDto,
+  ): Promise<NotificationData> {
     return this.prisma.notification.create({
       data: {
         userId: dto.userId,
@@ -89,7 +91,10 @@ export class NotificationsService {
     });
   }
 
-  async deleteNotification(notificationId: string, userId: string): Promise<void> {
+  async deleteNotification(
+    notificationId: string,
+    userId: string,
+  ): Promise<void> {
     await this.prisma.notification.deleteMany({
       where: { id: notificationId, userId },
     });
@@ -165,6 +170,8 @@ export class NotificationsService {
       }
     }
 
-    this.logger.log(`Created ${createdCount} reminder notifications for tomorrow's events`);
+    this.logger.log(
+      `Created ${createdCount} reminder notifications for tomorrow's events`,
+    );
   }
 }

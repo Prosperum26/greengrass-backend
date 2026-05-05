@@ -20,7 +20,7 @@ import {
 } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
-import { Request } from 'express';
+import { Request, Response } from 'express';
 import { CorrelationService } from '../correlation/correlation.service';
 
 interface AuthenticatedRequest extends Request {
@@ -35,7 +35,7 @@ export class RequestLoggingInterceptor implements NestInterceptor {
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
-    const response = context.switchToHttp().getResponse();
+    const response = context.switchToHttp().getResponse<Response>();
 
     const startTime = Date.now();
     const correlationId = this.correlationService.getId();
@@ -60,12 +60,12 @@ export class RequestLoggingInterceptor implements NestInterceptor {
 
     return next.handle().pipe(
       tap({
-        next: (data) => {
+        next: (data: unknown) => {
           const duration = Date.now() - startTime;
           const statusCode = response.statusCode;
 
           // Determine log level based on status code
-          const logMethod = statusCode >= 400 ? 'warn' : 'log';
+          const logMethod: 'log' | 'warn' = statusCode >= 400 ? 'warn' : 'log';
 
           this.logger[logMethod]({
             message: 'Request completed',
@@ -75,18 +75,27 @@ export class RequestLoggingInterceptor implements NestInterceptor {
             responseSize: this.estimateSize(data),
           });
         },
-        error: (error) => {
+        error: (err: unknown) => {
           const duration = Date.now() - startTime;
-          const statusCode = error.status ?? 500;
+          const errorObj = err as {
+            status?: number;
+            name?: string;
+            message?: string;
+            stack?: string;
+          };
+          const statusCode = errorObj.status ?? 500;
 
           this.logger.error({
             message: 'Request failed',
             ...logContext,
             statusCode,
             duration: `${duration}ms`,
-            errorName: error.name,
-            errorMessage: error.message,
-            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+            errorName: errorObj.name,
+            errorMessage: errorObj.message,
+            stack:
+              process.env.NODE_ENV === 'development'
+                ? errorObj.stack
+                : undefined,
           });
         },
       }),

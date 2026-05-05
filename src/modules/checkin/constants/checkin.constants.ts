@@ -3,9 +3,9 @@
  */
 
 /**
- * QR code expiration window in milliseconds (30 seconds)
+ * QR code expiration window in milliseconds (45 seconds)
  */
-export const QR_EXPIRE_WINDOW = 30000;
+export const QR_EXPIRE_WINDOW = 45000;
 
 /**
  * QR code tolerance - number of windows to accept (current + previous)

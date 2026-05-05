@@ -4,6 +4,13 @@ import { PointReason } from '@prisma/client';
 import { AddPointsDto } from './dto/add-points.dto';
 import { PrismaService } from '../prisma/prisma.service';
 
+interface BadgeConfig {
+  name: string;
+  description: string;
+  pointThreshold: number;
+  iconUrl: string;
+}
+
 describe('GamificationService', () => {
   let service: GamificationService;
   const mockPrisma = {};
@@ -32,7 +39,9 @@ describe('GamificationService', () => {
 
   describe('Point System', () => {
     it('should have correct point values for all reasons', () => {
-      const pointValues = (service as any).POINT_VALUES;
+      const pointValues = (
+        service as unknown as { POINT_VALUES: Record<PointReason, number> }
+      ).POINT_VALUES;
 
       expect(pointValues[PointReason.JOIN_EVENT]).toBe(10);
       expect(pointValues[PointReason.CHECK_IN]).toBe(20);
@@ -61,7 +70,9 @@ describe('GamificationService', () => {
 
   describe('Badge System', () => {
     it('should have default badges configured', () => {
-      const defaultBadges = (service as any).DEFAULT_BADGES;
+      const defaultBadges = (
+        service as unknown as { DEFAULT_BADGES: BadgeConfig[] }
+      ).DEFAULT_BADGES;
 
       expect(defaultBadges).toHaveLength(6);
       expect(defaultBadges[0].name).toBe('Green Beginner');
@@ -71,8 +82,10 @@ describe('GamificationService', () => {
     });
 
     it('should have badges with increasing point thresholds', () => {
-      const defaultBadges = (service as any).DEFAULT_BADGES;
-      const thresholds = defaultBadges.map((b: { pointThreshold: number }) => b.pointThreshold);
+      const defaultBadges = (
+        service as unknown as { DEFAULT_BADGES: BadgeConfig[] }
+      ).DEFAULT_BADGES;
+      const thresholds = defaultBadges.map((b) => b.pointThreshold);
 
       for (let i = 1; i < thresholds.length; i++) {
         expect(thresholds[i]).toBeGreaterThan(thresholds[i - 1]);

@@ -144,7 +144,11 @@ export class EventsController {
   @Delete(':id')
   @Roles('ORGANIZER', 'ADMIN')
   async deleteEvent(@Param('id') id: string, @Req() req: AuthRequest) {
-    const data = await this.eventsService.deleteEvent(id, req.user.sub, req.user.role);
+    const data = await this.eventsService.deleteEvent(
+      id,
+      req.user.sub,
+      req.user.role,
+    );
     return ok(data);
   }
 

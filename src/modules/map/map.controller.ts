@@ -1,10 +1,4 @@
-import {
-  Controller,
-  Get,
-  Param,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiQuery, ApiParam } from '@nestjs/swagger';
 import { MapService, EventMarker } from './map.service';
 import { JwtAuthGuard } from '../../common/guards/jwt.guard';
@@ -20,7 +14,8 @@ export class MapController {
   @Get('markers')
   @ApiOperation({
     summary: 'Lấy tất cả event markers cho bản đồ',
-    description: 'Trả về danh sách các sự kiện với tọa độ để hiển thị trên Leaflet map',
+    description:
+      'Trả về danh sách các sự kiện với tọa độ để hiển thị trên Leaflet map',
   })
   async getMarkers(): Promise<{ success: true; data: EventMarker[] }> {
     const data = await this.mapService.getEventMarkers();

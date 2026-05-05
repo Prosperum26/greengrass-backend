@@ -19,7 +19,7 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Public } from '../../common/decorators/public.decorator';
 
-interface RequestWithUser extends Request {
+export interface RequestWithUser extends Request {
   user: {
     sub: string;
     email: string;

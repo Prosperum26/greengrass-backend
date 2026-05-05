@@ -144,7 +144,9 @@ export class GetEventsQueryDto {
     default: 1,
   })
   @IsOptional()
-  @Transform(({ value }) => parseInt(value, 10))
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? parseInt(value, 10) : Number(value),
+  )
   @IsInt()
   @Min(1)
   page: number = 1;
@@ -157,11 +159,31 @@ export class GetEventsQueryDto {
     default: 10,
   })
   @IsOptional()
-  @Transform(({ value }) => parseInt(value, 10))
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? parseInt(value, 10) : Number(value),
+  )
   @IsInt()
   @Min(1)
   @Max(100)
   limit: number = 10;
+
+  @ApiPropertyOptional({
+    description: 'Sort by field',
+    enum: ['startTime', 'createdAt', 'title', 'points'],
+    default: 'startTime',
+  })
+  @IsOptional()
+  @IsEnum(['startTime', 'createdAt', 'title', 'points'])
+  sortBy?: 'startTime' | 'createdAt' | 'title' | 'points' = 'startTime';
+
+  @ApiPropertyOptional({
+    description: 'Sort order',
+    enum: ['asc', 'desc'],
+    default: 'asc',
+  })
+  @IsOptional()
+  @IsEnum(['asc', 'desc'])
+  sortOrder?: 'asc' | 'desc' = 'asc';
 }
 
 /** Dùng riêng cho GET /events/full (chỉ ADMIN) — phân trang đơn giản, không filter */
@@ -173,7 +195,9 @@ export class GetAllEventsQueryDto {
     default: 1,
   })
   @IsOptional()
-  @Transform(({ value }) => parseInt(value, 10))
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? parseInt(value, 10) : Number(value),
+  )
   @IsInt()
   @Min(1)
   page: number = 1;
@@ -186,7 +210,9 @@ export class GetAllEventsQueryDto {
     default: 10,
   })
   @IsOptional()
-  @Transform(({ value }) => parseInt(value, 10))
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? parseInt(value, 10) : Number(value),
+  )
   @IsInt()
   @Min(1)
   @Max(100)

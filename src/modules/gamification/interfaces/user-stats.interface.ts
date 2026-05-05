@@ -1,4 +1,4 @@
-import { Badge, UserBadge, PointHistory } from '@prisma/client';
+import { Badge, UserBadge } from '@prisma/client';
 
 export interface UserStats {
   userId: string;

@@ -24,6 +24,7 @@ export class CorrelationService {
 
   constructor() {
     // Create or get the namespace for correlation IDs
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
     this.namespace = createNamespace(CORRELATION_NAMESPACE);
   }
 
@@ -41,7 +42,10 @@ export class CorrelationService {
   runWithId<T>(fn: () => T, correlationId?: string): T {
     const id = correlationId ?? this.generateId();
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
     return this.namespace.runAndReturn(() => {
+      // Use namespace.set() to store in the active context
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
       this.namespace.set(CORRELATION_ID_KEY, id);
       return fn();
     });
@@ -52,7 +56,9 @@ export class CorrelationService {
    * Returns undefined if not in a correlation context
    */
   getId(): string | undefined {
-    return this.namespace.get(CORRELATION_ID_KEY);
+    // Use namespace.get() to retrieve from the active context
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+    return this.namespace.get(CORRELATION_ID_KEY) as string | undefined;
   }
 
   /**
@@ -60,6 +66,8 @@ export class CorrelationService {
    * Use with caution - prefer runWithId for proper scoping
    */
   setId(id: string): void {
+    // Use namespace.set() to store in the active context
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
     this.namespace.set(CORRELATION_ID_KEY, id);
   }
 }

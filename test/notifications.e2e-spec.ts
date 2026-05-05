@@ -10,6 +10,7 @@
  * SCOPE: Use test database, test full HTTP stack
  */
 
+/* eslint-disable @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
@@ -98,9 +99,24 @@ describe('Notifications API (e2e)', () => {
       // Arrange
       await prisma.notification.createMany({
         data: [
-          { userId: testUserId, title: 'Notif 1', message: 'Msg 1', isRead: false },
-          { userId: testUserId, title: 'Notif 2', message: 'Msg 2', isRead: false },
-          { userId: testUserId, title: 'Notif 3', message: 'Msg 3', isRead: true },
+          {
+            userId: testUserId,
+            title: 'Notif 1',
+            message: 'Msg 1',
+            isRead: false,
+          },
+          {
+            userId: testUserId,
+            title: 'Notif 2',
+            message: 'Msg 2',
+            isRead: false,
+          },
+          {
+            userId: testUserId,
+            title: 'Notif 3',
+            message: 'Msg 3',
+            isRead: true,
+          },
         ],
       });
 

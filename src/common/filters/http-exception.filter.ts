@@ -43,7 +43,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         | string
         | HttpExceptionResponse;
 
-      const message =
+      const errorMessage =
         typeof exceptionResponse === 'string'
           ? exceptionResponse
           : Array.isArray(exceptionResponse.message)
@@ -56,26 +56,30 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         success: false,
         error: {
           code: errorCode,
-          message: this.sanitizeErrorMessage(message, status),
+          message: this.sanitizeErrorMessage(errorMessage, status),
         },
       };
 
       // Log client errors as warnings
-      if (status >= 400 && status < 500) {
+      const statusCode = status as number;
+      if (statusCode >= 400 && statusCode < 500) {
         this.logger.warn(
-          `[${request.method}] ${request.url} - ${status}: ${message}`,
+          `[${request.method}] ${request.url} - ${statusCode}: ${errorMessage}`,
         );
       } else {
         // Log server errors with full stack
         this.logger.error(
-          `[${request.method}] ${request.url} - ${status}: ${message}`,
+          `[${request.method}] ${request.url} - ${statusCode}: ${errorMessage}`,
           exception instanceof Error ? exception.stack : undefined,
         );
       }
     } else {
       // Unexpected errors (non-HttpException)
-      const message =
+      const errorMsg =
         exception instanceof Error ? exception.message : 'Unknown error';
+
+      // Log for debugging
+      this.logger.error('Unexpected error:', errorMsg);
 
       errorResponse = {
         success: false,
@@ -117,17 +121,18 @@ export class GlobalExceptionFilter implements ExceptionFilter {
    * Sanitize error messages to avoid leaking sensitive info
    */
   private sanitizeErrorMessage(message: string, status: number): string {
+    const statusCode = status;
     // For 500 errors, never expose internal details to client
-    if (status >= 500) {
+    if (statusCode >= 500) {
       return 'An unexpected error occurred. Please try again later.';
     }
 
     // For 401/403, be generic about auth failures
-    if (status === HttpStatus.UNAUTHORIZED) {
+    if (statusCode === (HttpStatus.UNAUTHORIZED as number)) {
       return 'Authentication required';
     }
 
-    if (status === HttpStatus.FORBIDDEN) {
+    if (statusCode === (HttpStatus.FORBIDDEN as number)) {
       return 'Access denied';
     }
 

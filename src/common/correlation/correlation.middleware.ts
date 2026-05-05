@@ -21,7 +21,8 @@ export class CorrelationMiddleware implements NestMiddleware {
   use(req: Request, res: Response, next: NextFunction): void {
     // Get correlation ID from header or generate new one
     const correlationId =
-      req.headers[CORRELATION_ID_HEADER] ?? this.correlationService.generateId();
+      req.headers[CORRELATION_ID_HEADER] ??
+      this.correlationService.generateId();
 
     // Store as string (header value might be string | string[])
     const id = Array.isArray(correlationId)
@@ -34,10 +35,13 @@ export class CorrelationMiddleware implements NestMiddleware {
       res.setHeader(CORRELATION_ID_HEADER, id);
 
       // Log the incoming request with correlation ID
-      const logger = req.app.get('NestWinston');
+
+      const logger = req.app.get('NestWinston') as
+        | { log: (data: Record<string, unknown>) => void }
+        | undefined;
       if (logger) {
         logger.log({
-          message: `Incoming request`,
+          message: 'Incoming request',
           method: req.method,
           path: req.path,
           correlationId: id,

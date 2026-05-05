@@ -117,7 +117,10 @@ describe('CheckinService', () => {
     it('should generate QR token successfully', async () => {
       mockPrismaService.event.findUnique.mockResolvedValue(mockEvent);
 
-      const result = await service.generateQrToken(mockEventId, mockOrganizerId);
+      const result = await service.generateQrToken(
+        mockEventId,
+        mockOrganizerId,
+      );
 
       expect(result).toHaveProperty('eventId', mockEventId);
       expect(result).toHaveProperty('qrToken');
@@ -138,9 +141,7 @@ describe('CheckinService', () => {
 
       await expect(
         service.generateQrToken(mockEventId, mockOrganizerId),
-      ).rejects.toThrow(
-        NotFoundException,
-      );
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -245,8 +246,8 @@ describe('CheckinService', () => {
     });
 
     it('should accept QR token from previous time window (tolerance)', async () => {
-      // Generate a token from previous window
-      const previousWindow = Math.floor(Date.now() / 30000) - 1;
+      // Generate a token from previous window (using QR_EXPIRE_WINDOW = 45000ms)
+      const previousWindow = Math.floor(Date.now() / 45000) - 1;
       const previousToken = createHash('sha256')
         .update(`${mockEventId}:${mockQrSecret}:${previousWindow}`)
         .digest('hex');

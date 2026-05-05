@@ -50,7 +50,11 @@ export class CheckinController {
     @Param('eventId', ParseUUIDPipe) eventId: string,
     @Req() req: RequestWithUser,
   ): Promise<QrResponseDto> {
-    return this.checkinService.generateQrToken(eventId, req.user.sub, req.user.role);
+    return this.checkinService.generateQrToken(
+      eventId,
+      req.user.sub,
+      req.user.role,
+    );
   }
 
   /**
@@ -85,7 +89,11 @@ export class CheckinController {
     @Param('eventId', ParseUUIDPipe) eventId: string,
     @Req() req: RequestWithUser,
   ): Promise<Array<{ userId: string; checkInTime: Date; status: string }>> {
-    return this.checkinService.getCheckedInParticipants(eventId, req.user.sub, req.user.role);
+    return this.checkinService.getCheckedInParticipants(
+      eventId,
+      req.user.sub,
+      req.user.role,
+    );
   }
 
   /**
@@ -106,6 +114,10 @@ export class CheckinController {
     completed: number;
     checkInRate: number;
   }> {
-    return this.checkinService.getCheckInStats(eventId, req.user.sub, req.user.role);
+    return this.checkinService.getCheckInStats(
+      eventId,
+      req.user.sub,
+      req.user.role,
+    );
   }
 }

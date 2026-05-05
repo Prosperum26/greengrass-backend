@@ -96,7 +96,11 @@ export class MapService {
     };
   }
 
-  async getNearbyEvents(lat: number, lng: number, radiusKm: number = 10): Promise<EventMarker[]> {
+  async getNearbyEvents(
+    lat: number,
+    lng: number,
+    radiusKm: number = 10,
+  ): Promise<EventMarker[]> {
     const allEvents = await this.getEventMarkers();
 
     return allEvents.filter((event) => {
@@ -105,7 +109,12 @@ export class MapService {
     });
   }
 
-  private calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  private calculateDistance(
+    lat1: number,
+    lon1: number,
+    lat2: number,
+    lon2: number,
+  ): number {
     const R = 6371;
     const dLat = this.deg2rad(lat2 - lat1);
     const dLon = this.deg2rad(lon2 - lon1);

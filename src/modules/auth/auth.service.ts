@@ -10,6 +10,14 @@ import { JwtService } from '@nestjs/jwt';
 import { OAuth2Client } from 'google-auth-library';
 import { UserStatus } from '@prisma/client';
 
+export interface OrganizerRequestDto {
+  email: string;
+  fullName: string;
+  password: string;
+  organizationName: string;
+  description?: string;
+}
+
 @Injectable()
 export class AuthService {
   private googleClient: OAuth2Client;
@@ -127,7 +135,11 @@ export class AuthService {
   // ========================
   // JWT GENERATOR
   // ========================
-  private async generateToken(user: { id: string; email: string; role: string }) {
+  private async generateToken(user: {
+    id: string;
+    email: string;
+    role: string;
+  }) {
     const payload = {
       sub: user.id,
       email: user.email,
@@ -135,12 +147,13 @@ export class AuthService {
     };
 
     const jwtSecret = this.configService.get<string>('JWT_SECRET');
-    const jwtRefreshSecret = this.configService.get<string>('JWT_REFRESH_SECRET');
+    const jwtRefreshSecret =
+      this.configService.get<string>('JWT_REFRESH_SECRET');
 
     // Access token
     const accessToken = this.jwtService.sign(payload, {
       secret: jwtSecret,
-      expiresIn: '15m',
+      expiresIn: '30m',
     });
 
     // Refresh token
@@ -210,7 +223,7 @@ export class AuthService {
   // ========================
   // ORGANIZER REQUEST
   // ========================
-  async requestOrganizer(dto: any) {
+  async requestOrganizer(dto: OrganizerRequestDto) {
     // request làm organizer
     const { email, fullName, password, organizationName, description } = dto;
 

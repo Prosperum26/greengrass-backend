@@ -47,6 +47,12 @@ export class UsersController {
   }
 
   @Public()
+  @Get('organizers')
+  async getOrganizers() {
+    return this.usersService.getOrganizers();
+  }
+
+  @Public()
   @Get(':id/profile')
   async getProfile(@Param('id') userId: string) {
     return this.usersService.getProfile(userId);

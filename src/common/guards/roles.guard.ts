@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Role, ROLES_KEY } from '../decorators/roles.decorator';
+import { AuthenticatedRequest } from '../types';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
@@ -23,13 +24,13 @@ export class RolesGuard implements CanActivate {
       return true;
     }
 
-    const { user } = context.switchToHttp().getRequest();
+    const { user } = context.switchToHttp().getRequest<AuthenticatedRequest>();
 
     if (!user) {
       throw new UnauthorizedException('No authenticated user found.');
     }
 
-    if (!requiredRoles.includes(user.role as Role)) {
+    if (!requiredRoles.includes(user.role)) {
       throw new ForbiddenException(
         `Access denied. Required: [${requiredRoles.join(', ')}]. Your role: ${user.role}.`,
       );
