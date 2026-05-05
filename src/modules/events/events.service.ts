@@ -87,8 +87,17 @@ export class EventsService {
 
     const where: Record<string, unknown> = {};
 
+    // Filter by dynamic status (derived from actual time, not stored status)
     if (query.status) {
-      where.status = query.status;
+      const now = new Date();
+      if (query.status === 'COMPLETED') {
+        where.endTime = { lt: now };
+      } else if (query.status === 'UPCOMING') {
+        where.startTime = { gt: now };
+      } else if (query.status === 'ONGOING') {
+        where.startTime = { lte: now };
+        where.endTime = { gte: now };
+      }
     }
 
     if (query.keyword) {
