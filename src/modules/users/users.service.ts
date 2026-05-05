@@ -148,6 +148,19 @@ export class UsersService {
     };
   }
 
+  async getOrganizers() {
+    const organizers = await this.prisma.user.findMany({
+      where: { role: 'ORGANIZER', status: 'ACTIVE' },
+      select: {
+        id: true,
+        fullName: true,
+        avatarUrl: true,
+      },
+      orderBy: { fullName: 'asc' },
+    });
+    return organizers;
+  }
+
   async uploadAvatar(
     userId: string,
     avatar: Express.Multer.File,

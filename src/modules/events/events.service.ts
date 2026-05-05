@@ -90,11 +90,11 @@ export class EventsService {
     // Filter by dynamic status (derived from actual time, not stored status)
     if (query.status) {
       const now = new Date();
-      if (query.status === 'COMPLETED') {
+      if (query.status === EventStatus.COMPLETED) {
         where.endTime = { lt: now };
-      } else if (query.status === 'UPCOMING') {
+      } else if (query.status === EventStatus.UPCOMING) {
         where.startTime = { gt: now };
-      } else if (query.status === 'ONGOING') {
+      } else if (query.status === EventStatus.ONGOING) {
         where.startTime = { lte: now };
         where.endTime = { gte: now };
       }
