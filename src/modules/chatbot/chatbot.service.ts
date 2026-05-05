@@ -309,21 +309,27 @@ export class ChatbotService {
     message: string,
     tool: Intent,
     context: ChatContext,
+    isQuickSuggestion = false,
   ): [string, string] {
     const systemMsg = LEAFIA_SYSTEM;
     let userPrompt = '';
+
+    // Add context for quick suggestions
+    const suggestionContext = isQuickSuggestion
+      ? 'Người dùng đã chọn từ gợi ý nhanh. Hãy cung cấp câu trả lời chi tiết và hữu ích liên quan đến chủ đề này.\n\n'
+      : '';
 
     if (
       tool === 'app_info' ||
       tool === 'app_guide' ||
       tool === 'eco_knowledge'
     ) {
-      userPrompt = `${APP_KNOWLEDGE[tool]}\n\nCâu hỏi: ${message}`;
+      userPrompt = `${suggestionContext}${APP_KNOWLEDGE[tool]}\n\nCâu hỏi: ${message}`;
     } else if (!context && tool !== 'general') {
-      userPrompt = `Không có dữ liệu.\n\nCâu hỏi: ${message}`;
+      userPrompt = `${suggestionContext}Không có dữ liệu.\n\nCâu hỏi: ${message}`;
     } else if (tool === 'get_events') {
       const events = context as Event[];
-      userPrompt = `Danh sách:\n${this.formatEvents(events)}\n\nCâu hỏi: ${message}`;
+      userPrompt = `${suggestionContext}Danh sách:\n${this.formatEvents(events)}\n\nCâu hỏi: ${message}`;
     } else if (tool === 'get_nearby_events') {
       const nearbyEvents = context as NearbyEvent[];
       const list = nearbyEvents
@@ -332,12 +338,12 @@ export class ChatbotService {
             `${i + 1}. ${e.title} - ${e.location} (${e.distanceKm}km)`,
         )
         .join('\n');
-      userPrompt = `Gần bạn:\n${list}\n\nCâu hỏi: ${message}`;
+      userPrompt = `${suggestionContext}Gần bạn:\n${list}\n\nCâu hỏi: ${message}`;
     } else if (tool === 'get_event_detail') {
       const event = context as Event;
-      userPrompt = `Chi tiết:\n${event?.title} - ${event?.location}\n\nCâu hỏi: ${message}`;
+      userPrompt = `${suggestionContext}Chi tiết:\n${event?.title} - ${event?.location}\n\nCâu hỏi: ${message}`;
     } else {
-      userPrompt = message;
+      userPrompt = `${suggestionContext}${message}`;
     }
 
     return [systemMsg, userPrompt];
@@ -348,7 +354,13 @@ export class ChatbotService {
     const message = dto.message?.trim();
     if (!message) throw new BadRequestException('Message required');
 
-    const tool = this.route(message);
+    // Check if this is a quick suggestion
+    const isQuickSuggestion = message.startsWith('[Gợi ý nhanh]');
+    const actualMessage = isQuickSuggestion
+      ? message.replace('[Gợi ý nhanh]', '').trim()
+      : message;
+
+    const tool = this.route(actualMessage);
     let context: ChatContext = null;
 
     try {
@@ -357,7 +369,7 @@ export class ChatbotService {
       }
 
       if (tool === 'get_event_detail') {
-        context = await this.fetchEventDetail(message);
+        context = await this.fetchEventDetail(actualMessage);
       }
 
       if (tool === 'get_nearby_events') {
@@ -375,11 +387,10 @@ export class ChatbotService {
       this.logger.warn(`DB error: ${errorMsg}`);
     }
 
-    // 1. Không gọi AI cho knowledge có sẵn
+    // 1. Không gọi AI cho knowledge có sẵn, trừ khi là quick suggestion
     if (
-      tool === 'app_info' ||
-      tool === 'app_guide' ||
-      tool === 'eco_knowledge'
+      !isQuickSuggestion &&
+      (tool === 'app_info' || tool === 'app_guide' || tool === 'eco_knowledge')
     ) {
       return {
         response: APP_KNOWLEDGE[tool],
@@ -388,8 +399,13 @@ export class ChatbotService {
       };
     }
 
-    // 2. Không gọi AI nếu đã có data rõ ràng
-    if (tool === 'get_events' && Array.isArray(context) && context.length > 0) {
+    // 2. Không gọi AI nếu đã có data rõ ràng, trừ khi là quick suggestion
+    if (
+      !isQuickSuggestion &&
+      tool === 'get_events' &&
+      Array.isArray(context) &&
+      context.length > 0
+    ) {
       return {
         response: this.formatEvents(context as Event[]),
         tool,
@@ -398,6 +414,7 @@ export class ChatbotService {
     }
 
     if (
+      !isQuickSuggestion &&
       tool === 'get_nearby_events' &&
       Array.isArray(context) &&
       context.length > 0
@@ -417,7 +434,12 @@ export class ChatbotService {
       };
     }
 
-    if (tool === 'get_event_detail' && context && !Array.isArray(context)) {
+    if (
+      !isQuickSuggestion &&
+      tool === 'get_event_detail' &&
+      context &&
+      !Array.isArray(context)
+    ) {
       const event = context;
       return {
         response: `${event.title} - ${event.location}`,
@@ -426,7 +448,12 @@ export class ChatbotService {
       };
     }
 
-    const [systemMsg, userPrompt] = this.buildPrompt(message, tool, context);
+    const [systemMsg, userPrompt] = this.buildPrompt(
+      actualMessage,
+      tool,
+      context,
+      isQuickSuggestion,
+    );
 
     // CACHE
     if (this.cache.has(userPrompt)) {
