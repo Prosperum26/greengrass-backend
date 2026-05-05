@@ -170,7 +170,7 @@ describe('GamificationController', () => {
 
       const result = await controller.getUserRank(mockReq);
 
-      expect(result).toEqual({ userId: 'user-123', rank: 5 });
+      expect(result).toEqual(5);
       expect(service.getUserRank).toHaveBeenCalledWith('user-123');
     });
   });
