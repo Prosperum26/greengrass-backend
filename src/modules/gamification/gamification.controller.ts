@@ -88,8 +88,18 @@ export class GamificationController {
    */
   @Get('rank')
   async getUserRank(@Req() req: RequestWithUser) {
-    const rank = await this.gamificationService.getUserRank(req.user.sub);
-    return { userId: req.user.sub, rank };
+    return this.gamificationService.getUserRank(req.user.sub);
+  }
+
+  /**
+   * Retroactively award First Green Step badge to all users who have checked in
+   * POST /points/retroactive-badges
+   */
+  @Post('retroactive-badges')
+  @Roles('ADMIN')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  async retroactiveAwardBadges() {
+    return await this.gamificationService.retroactiveAwardFirstStepBadges();
   }
 
   /**

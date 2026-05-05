@@ -379,6 +379,72 @@ export class GamificationService {
   }
 
   /**
+   * Retroactively award First Green Step badge to all users who have checked in
+   */
+  async retroactiveAwardFirstStepBadges(): Promise<{
+    awarded: number;
+    skipped: number;
+  }> {
+    const firstStepBadge = await this.prisma.badge.findUnique({
+      where: { name: 'First Green Step' },
+    });
+
+    if (!firstStepBadge) {
+      throw new Error('First Green Step badge not found');
+    }
+
+    // Find all users who have checked in but don't have the First Green Step badge
+    const usersWithoutBadge = await this.prisma.user.findMany({
+      where: {
+        NOT: {
+          userBadges: {
+            some: {
+              badgeId: firstStepBadge.id,
+            },
+          },
+        },
+        eventRegistrations: {
+          some: {
+            status: { in: ['CHECKED_IN', 'COMPLETED'] },
+          },
+        },
+      },
+      select: {
+        id: true,
+        email: true,
+        fullName: true,
+      },
+    });
+
+    let awarded = 0;
+    let skipped = 0;
+
+    for (const user of usersWithoutBadge) {
+      try {
+        await this.prisma.userBadge.create({
+          data: {
+            userId: user.id,
+            badgeId: firstStepBadge.id,
+          },
+        });
+        awarded++;
+        this.logger.log(
+          `Retroactively awarded First Green Step badge to user ${user.email} (${user.fullName})`,
+        );
+      } catch (error) {
+        skipped++;
+        this.logger.error(`Failed to award badge to user ${user.id}:`, error);
+      }
+    }
+
+    this.logger.log(
+      `Retroactive badge award completed: ${awarded} awarded, ${skipped} skipped`,
+    );
+
+    return { awarded, skipped };
+  }
+
+  /**
    * Check and assign badges to user based on their points
    */
   async checkAndAssignBadges(userId: string): Promise<void> {

@@ -64,6 +64,19 @@ export class CreateEventDto {
   @Type(() => Number)
   longitude!: number;
 
+  @ApiPropertyOptional({
+    description: 'Check-in radius in meters',
+    example: 50,
+    minimum: 1,
+    maximum: 1000,
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  @Max(1000)
+  @Type(() => Number)
+  checkinRadius?: number;
+
   @ApiProperty({
     description: 'Start time (ISO 8601)',
     example: '2025-06-01T08:00:00.000Z',
