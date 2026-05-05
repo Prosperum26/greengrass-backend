@@ -61,7 +61,7 @@ export class CheckinController {
    * Check-in to an event using QR token
    *
    * @param eventId - The event ID
-   * @param checkInDto - The check-in request with QR token
+   * @param checkInDto - The check-in request with QR token and location
    * @returns Check-in response
    */
   @Post(':eventId/check-in')
@@ -73,7 +73,13 @@ export class CheckinController {
     @Req() req: RequestWithUser,
   ): Promise<CheckInResponseDto> {
     const userId = req.user.sub;
-    return this.checkinService.checkIn(userId, eventId, checkInDto.qrToken);
+    return this.checkinService.checkIn(
+      userId,
+      eventId,
+      checkInDto.qrToken,
+      checkInDto.userLatitude,
+      checkInDto.userLongitude,
+    );
   }
 
   /**

@@ -92,6 +92,7 @@ model Event {
   location    String
   latitude    Float
   longitude   Float
+  checkinRadius Float      @default(50.0) // Configurable check-in radius in meters
   startTime   DateTime
   endTime     DateTime
   points      Int
@@ -140,6 +141,8 @@ model EventRegistration {
   eventId     String
   status      RegistrationStatus @default(REGISTERED)
   checkInTime DateTime?
+  checkinLatitude Float?         // User's latitude at check-in time
+  checkinLongitude Float?        // User's longitude at check-in time
   proofUrl    String?
   proofImageUrl    String?
   proofImagePublicId String?

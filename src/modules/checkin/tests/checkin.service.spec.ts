@@ -150,6 +150,8 @@ describe('CheckinService', () => {
   describe('checkIn', () => {
     it('should successfully check in user', async () => {
       const validQrToken = QrUtil.generateQrToken(mockEventId, mockQrSecret);
+      const dummyLatitude = 10.762622;
+      const dummyLongitude = 106.660172;
 
       mockPrismaService.event.findUnique.mockResolvedValue(mockEvent);
       mockPrismaService.eventRegistration.findUnique.mockResolvedValue(
@@ -163,6 +165,8 @@ describe('CheckinService', () => {
         mockUserId,
         mockEventId,
         validQrToken,
+        dummyLatitude,
+        dummyLongitude,
       );
 
       expect(result.success).toBe(true);
@@ -179,8 +183,13 @@ describe('CheckinService', () => {
         data: {
           status: RegistrationStatus.CHECKED_IN,
           checkInTime: expect.any(Date) as Date,
+          checkinLatitude: dummyLatitude,
+          checkinLongitude: dummyLongitude,
         },
       });
+      expect(mockGamificationService.addPoints).toHaveBeenCalled();
+      expect(mockGamificationService.updateStreak).toHaveBeenCalled();
+      expect(mockGamificationService.awardFirstEventBadge).toHaveBeenCalled();
     });
 
     it('should throw NotFoundException when event not found', async () => {
@@ -254,6 +263,9 @@ describe('CheckinService', () => {
         .update(`${mockEventId}:${mockQrSecret}:${previousWindow}`)
         .digest('hex');
 
+      const dummyLatitude = 10.762622;
+      const dummyLongitude = 106.660172;
+
       mockPrismaService.event.findUnique.mockResolvedValue(mockEvent);
       mockPrismaService.eventRegistration.findUnique.mockResolvedValue(
         mockRegistration,
@@ -266,6 +278,8 @@ describe('CheckinService', () => {
         mockUserId,
         mockEventId,
         previousToken,
+        dummyLatitude,
+        dummyLongitude,
       );
 
       expect(result.success).toBe(true);

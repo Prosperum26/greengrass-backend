@@ -11,7 +11,37 @@ import { QrUtil } from './utils/qr.util';
 import { CheckInLogger } from './logs/checkin.logger';
 import { CheckInFailReason } from './constants/checkin.constants';
 import { CheckInResponseDto, QrResponseDto } from './dto/checkin.dto';
-import { EventStatus, RegistrationStatus, PointReason } from '@prisma/client';
+import { isWithinRange, isValidCoordinates } from './utils/distance.util';
+import {
+  EventStatus,
+  RegistrationStatus,
+  PointReason,
+  Event,
+} from '@prisma/client';
+
+// Temporary type extensions until Prisma migration is run
+interface EventWithLocation extends Omit<Event, 'checkinRadius'> {
+  checkinRadius?: number;
+}
+
+interface EventRegistrationWithLocation {
+  userId: string;
+  eventId: string;
+  status: RegistrationStatus;
+  checkInTime?: Date;
+  checkinLatitude?: number;
+  checkinLongitude?: number;
+  user: {
+    fullName: string;
+  };
+}
+
+interface EventRegistrationUpdateData {
+  status: RegistrationStatus;
+  checkInTime: Date;
+  checkinLatitude?: number;
+  checkinLongitude?: number;
+}
 
 /**
  * Service for handling check-in operations
@@ -62,24 +92,28 @@ export class CheckinService {
 
   /**
    * Process a check-in for a user at an event
-   * Validates QR token, checks registration status, and awards points
+   * Validates QR token, checks registration status, validates location, and awards points
    *
    * @param userId - The user ID checking in
    * @param eventId - The event ID
    * @param qrToken - The QR token to verify
+   * @param userLatitude - Optional user latitude for location validation
+   * @param userLongitude - Optional user longitude for location validation
    * @returns Check-in response with success status
    */
   async checkIn(
     userId: string,
     eventId: string,
     qrToken: string,
+    userLatitude?: number,
+    userLongitude?: number,
   ): Promise<CheckInResponseDto> {
     // Step 1: Find event
-    const event = await this.prisma.event.findUnique({
+    const eventResult = await this.prisma.event.findUnique({
       where: { id: eventId },
     });
 
-    if (!event) {
+    if (!eventResult) {
       this.logger.logFailure(
         userId,
         eventId,
@@ -87,6 +121,11 @@ export class CheckinService {
       );
       throw new NotFoundException(`Event with ID ${eventId} not found`);
     }
+
+    const event: EventWithLocation = {
+      ...eventResult,
+      checkinRadius: (eventResult as EventWithLocation).checkinRadius || 50.0,
+    };
 
     // Check if event is ongoing or upcoming (allow check-in)
     if (event.status === EventStatus.COMPLETED) {
@@ -133,7 +172,57 @@ export class CheckinService {
       throw new BadRequestException('Invalid or expired QR code');
     }
 
-    // Step 5: Save check-in (update registration)
+    // Step 5: Validate location if coordinates provided
+    if (userLatitude && userLongitude) {
+      if (!isValidCoordinates(userLatitude, userLongitude)) {
+        this.logger.logFailure(
+          userId,
+          eventId,
+          CheckInFailReason.INVALID_LOCATION,
+          'Invalid GPS coordinates provided',
+        );
+        throw new BadRequestException('Invalid GPS coordinates provided');
+      }
+
+      const { isWithinRange: inRange, distance } = isWithinRange(
+        userLatitude,
+        userLongitude,
+        event.latitude,
+        event.longitude,
+        event.checkinRadius || 50.0, // Default to 50m if not set
+      );
+
+      if (!inRange) {
+        this.logger.logFailure(
+          userId,
+          eventId,
+          CheckInFailReason.OUT_OF_RANGE,
+          `User is ${distance.toFixed(2)}m away from event (required: ${event.checkinRadius || 50.0}m)`,
+        );
+
+        return {
+          success: false,
+          message: `Bạn đang cách sự kiện ${distance.toFixed(0)}m. Vui lòng di chuyển đến trong phạm vi ${event.checkinRadius || 50}m để check-in.`,
+          distanceToEvent: distance,
+          requiredRadius: event.checkinRadius || 50.0,
+        };
+      }
+    } else {
+      // If no location provided, check if event requires location validation
+      if (event.checkinRadius && event.checkinRadius > 0) {
+        this.logger.logFailure(
+          userId,
+          eventId,
+          CheckInFailReason.LOCATION_REQUIRED,
+          'Location coordinates required for check-in',
+        );
+        throw new BadRequestException(
+          'Vị trí của bạn là bắt buộc để check-in sự kiện này. Vui lòng bật định vị và thử lại.',
+        );
+      }
+    }
+
+    // Step 6: Save check-in (update registration)
     const updatedRegistration = await this.prisma.eventRegistration.update({
       where: {
         userId_eventId: {
@@ -144,7 +233,9 @@ export class CheckinService {
       data: {
         status: RegistrationStatus.CHECKED_IN,
         checkInTime: new Date(),
-      },
+        checkinLatitude: userLatitude,
+        checkinLongitude: userLongitude,
+      } as EventRegistrationUpdateData,
     });
 
     // Step 6: Add points and update streak via gamification service
@@ -176,38 +267,51 @@ export class CheckinService {
    * For organizer dashboard
    *
    * @param eventId - The event ID
-   * @returns List of checked-in participants
+   * @returns List of checked-in participants with user names
    */
   async getCheckedInParticipants(
     eventId: string,
     organizerId: string,
     userRole?: string,
-  ): Promise<Array<{ userId: string; checkInTime: Date; status: string }>> {
+  ): Promise<
+    Array<{
+      userId: string;
+      userName: string;
+      checkInTime: Date;
+      status: string;
+      checkinLatitude?: number;
+      checkinLongitude?: number;
+    }>
+  > {
     await this.ensureOrganizerOwnsEvent(eventId, organizerId, userRole);
 
-    const checkedInRegistrations = await this.prisma.eventRegistration.findMany(
-      {
+    const checkedInRegistrations =
+      (await this.prisma.eventRegistration.findMany({
         where: {
           eventId,
           status: {
             in: [RegistrationStatus.CHECKED_IN, RegistrationStatus.COMPLETED],
           },
         },
-        select: {
-          userId: true,
-          checkInTime: true,
-          status: true,
+        include: {
+          user: {
+            select: {
+              fullName: true,
+            },
+          },
         },
         orderBy: {
           checkInTime: 'asc',
         },
-      },
-    );
+      })) as EventRegistrationWithLocation[];
 
     return checkedInRegistrations.map((reg) => ({
       userId: reg.userId,
+      userName: reg.user.fullName || 'Unknown User',
       checkInTime: reg.checkInTime!,
       status: reg.status,
+      checkinLatitude: reg.checkinLatitude,
+      checkinLongitude: reg.checkinLongitude,
     }));
   }
 
