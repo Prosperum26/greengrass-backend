@@ -74,11 +74,13 @@ describe('GamificationService', () => {
         service as unknown as { DEFAULT_BADGES: BadgeConfig[] }
       ).DEFAULT_BADGES;
 
-      expect(defaultBadges).toHaveLength(6);
-      expect(defaultBadges[0].name).toBe('Green Beginner');
-      expect(defaultBadges[0].pointThreshold).toBe(100);
-      expect(defaultBadges[5].name).toBe('Planet Savior');
-      expect(defaultBadges[5].pointThreshold).toBe(5000);
+      expect(defaultBadges).toHaveLength(7);
+      expect(defaultBadges[0].name).toBe('First Green Step');
+      expect(defaultBadges[0].pointThreshold).toBe(0);
+      expect(defaultBadges[1].name).toBe('Green Beginner');
+      expect(defaultBadges[1].pointThreshold).toBe(100);
+      expect(defaultBadges[6].name).toBe('Planet Savior');
+      expect(defaultBadges[6].pointThreshold).toBe(5000);
     });
 
     it('should have badges with increasing point thresholds', () => {

@@ -156,6 +156,9 @@ export class CheckinService {
     });
     await this.gamificationService.updateStreak(userId);
 
+    // Step 7: Award First Green Step badge for first successful check-in
+    await this.gamificationService.awardFirstEventBadge(userId);
+
     // Step 7: Log success
     this.logger.logSuccess(userId, eventId);
 

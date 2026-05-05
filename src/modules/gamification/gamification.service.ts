@@ -34,6 +34,12 @@ export class GamificationService {
   // Default badges configuration
   private readonly DEFAULT_BADGES: BadgeConfig[] = [
     {
+      name: 'First Green Step',
+      description: 'First successful event check-in',
+      pointThreshold: 0,
+      iconUrl: '/badges/first-step.png',
+    },
+    {
       name: 'Green Beginner',
       description: 'Earned 100 points',
       pointThreshold: 100,
@@ -304,6 +310,43 @@ export class GamificationService {
   }
 
   /**
+   * Award First Green Step badge when user checks in for their first event
+   */
+  async awardFirstEventBadge(userId: string): Promise<boolean> {
+    const firstStepBadge = await this.prisma.badge.findUnique({
+      where: { name: 'First Green Step' },
+    });
+
+    if (!firstStepBadge) {
+      this.logger.warn('First Green Step badge not found');
+      return false;
+    }
+
+    const existingBadge = await this.prisma.userBadge.findUnique({
+      where: {
+        userId_badgeId: {
+          userId,
+          badgeId: firstStepBadge.id,
+        },
+      },
+    });
+
+    if (existingBadge) {
+      return false;
+    }
+
+    await this.prisma.userBadge.create({
+      data: {
+        userId,
+        badgeId: firstStepBadge.id,
+      },
+    });
+
+    this.logger.log(`Awarded First Green Step badge to user ${userId}`);
+    return true;
+  }
+
+  /**
    * Check and assign badges to user based on their points
    */
   async checkAndAssignBadges(userId: string): Promise<void> {
@@ -330,9 +373,11 @@ export class GamificationService {
     const earnedBadgeIds = new Set(userBadgeIds.map((ub) => ub.badgeId));
 
     // Find badges user qualifies for but hasn't earned yet
+    // Exclude First Green Step badge (pointThreshold = 0) as it's awarded separately
     const qualifyingBadges = await this.prisma.badge.findMany({
       where: {
         pointThreshold: {
+          gt: 0,
           lte: user.totalPoints,
         },
         id: {

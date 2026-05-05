@@ -70,6 +70,7 @@ describe('CheckinService', () => {
   const mockGamificationService = {
     addPoints: jest.fn(),
     updateStreak: jest.fn(),
+    awardFirstEventBadge: jest.fn(),
   };
   const mockConfigService = {
     get: jest.fn(),
@@ -107,6 +108,7 @@ describe('CheckinService', () => {
     jest.clearAllMocks();
     mockGamificationService.addPoints.mockResolvedValue(undefined);
     mockGamificationService.updateStreak.mockResolvedValue(1);
+    mockGamificationService.awardFirstEventBadge.mockResolvedValue(true);
   });
 
   afterEach(() => {
