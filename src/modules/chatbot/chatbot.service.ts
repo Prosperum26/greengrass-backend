@@ -1,11 +1,8 @@
-import {
-  Injectable,
-  Logger,
-  BadRequestException,
-} from '@nestjs/common';
+import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { Event } from '@prisma/client';
 
 // ─── Types ───────────────────────────────────────────────
 type Intent =
@@ -23,6 +20,14 @@ interface ChatDto {
   lng?: number;
   userId?: string;
 }
+
+interface NearbyEvent {
+  title: string;
+  location: string;
+  distanceKm: string;
+}
+
+type ChatContext = Event[] | NearbyEvent[] | Event | null | undefined;
 
 export interface ChatResponse {
   response: string;
@@ -78,7 +83,7 @@ export class ChatbotService {
   private model: ReturnType<
     InstanceType<typeof GoogleGenerativeAI>['getGenerativeModel']
   >;
-// simple cache
+  // simple cache
   private cache = new Map<string, string>();
 
   constructor(
@@ -106,13 +111,19 @@ export class ChatbotService {
     if (msg.includes('sự kiện')) return 'get_events';
     if (msg.includes('cách dùng')) return 'app_guide';
     if (msg.includes('app') || msg.includes('greengrass')) return 'app_info';
-    if (msg.includes('rác') || msg.includes('môi trường')) return 'eco_knowledge';
+    if (msg.includes('rác') || msg.includes('môi trường'))
+      return 'eco_knowledge';
 
     return 'general';
   }
 
   // ─── Distance ─────────────────────────────────────────
-  private distance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  private distance(
+    lat1: number,
+    lon1: number,
+    lat2: number,
+    lon2: number,
+  ): number {
     const R = 6371;
     const toRad = (d: number) => (d * Math.PI) / 180;
 
@@ -121,9 +132,7 @@ export class ChatbotService {
 
     const a =
       Math.sin(dLat / 2) ** 2 +
-      Math.cos(toRad(lat1)) *
-        Math.cos(toRad(lat2)) *
-        Math.sin(dLon / 2) ** 2;
+      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
 
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   }
@@ -147,19 +156,23 @@ export class ChatbotService {
       .replace(/chi tiết|thông tin|về|sự kiện/g, '')
       .trim();
 
-    return events.find(e =>
-      e.title.toLowerCase().includes(clean) ||
-      clean.includes(e.title.toLowerCase())
+    return events.find(
+      (e) =>
+        e.title.toLowerCase().includes(clean) ||
+        clean.includes(e.title.toLowerCase()),
     );
   }
 
-  private async fetchNearbyEvents(lat: number, lng: number) {
+  private async fetchNearbyEvents(
+    lat: number,
+    lng: number,
+  ): Promise<NearbyEvent[]> {
     const events = await this.prisma.event.findMany({
       where: { status: 'UPCOMING' },
     });
 
     return events
-      .map((e: any) => ({
+      .map((e: Event) => ({
         title: e.title,
         location: e.location,
         distanceKm: this.distance(
@@ -178,31 +191,41 @@ export class ChatbotService {
     try {
       const result = await this.model.generateContent(prompt);
       return result.response.text().trim();
-    } catch (err: any) {
-      if (err?.status === 429 && retry > 0) {
+    } catch (err: unknown) {
+      if (
+        err instanceof Error &&
+        'status' in err &&
+        err.status === 429 &&
+        retry > 0
+      ) {
         this.logger.warn('Rate limit → wait 45s...');
-        await new Promise(res => setTimeout(res, 45000));
+        await new Promise((res) => setTimeout(res, 45000));
         return this.callGemini(prompt, retry - 1);
       }
       throw err;
     }
   }
 
-  // Format context (NO stringify) 
-  private formatEvents(events: any[]): string {
+  // Format context (NO stringify)
+  private formatEvents(events: Event[]): string {
     if (!events?.length) return 'Không có dữ liệu.';
 
     return events
-      .map(
-        (e, i) =>
-          `${i + 1}. ${e.title}\n📍 ${e.location}`
-      )
+      .map((e, i) => `${i + 1}. ${e.title}\n📍 ${e.location}`)
       .join('\n\n');
   }
 
-  //  Prompt builder 
-  private buildPrompt(message: string, tool: Intent, context: any): string {
-    if (tool === 'app_info' || tool === 'app_guide' || tool === 'eco_knowledge') {
+  //  Prompt builder
+  private buildPrompt(
+    message: string,
+    tool: Intent,
+    context: ChatContext,
+  ): string {
+    if (
+      tool === 'app_info' ||
+      tool === 'app_guide' ||
+      tool === 'eco_knowledge'
+    ) {
       return `${LEAFIA_SYSTEM}\n\n${APP_KNOWLEDGE[tool]}\n\nCâu hỏi: ${message}`;
     }
 
@@ -211,13 +234,16 @@ export class ChatbotService {
     }
 
     if (tool === 'get_events') {
-      return `${LEAFIA_SYSTEM}\n\nDanh sách:\n${this.formatEvents(context)}\n\nCâu hỏi: ${message}`;
+      const events = context as Event[];
+      return `${LEAFIA_SYSTEM}\n\nDanh sách:\n${this.formatEvents(events)}\n\nCâu hỏi: ${message}`;
     }
 
     if (tool === 'get_nearby_events') {
-      const list = context
-        .map((e: any, i: number) =>
-          `${i + 1}. ${e.title} - ${e.location} (${e.distanceKm}km)`
+      const nearbyEvents = context as NearbyEvent[];
+      const list = nearbyEvents
+        .map(
+          (e: NearbyEvent, i: number) =>
+            `${i + 1}. ${e.title} - ${e.location} (${e.distanceKm}km)`,
         )
         .join('\n');
 
@@ -225,126 +251,140 @@ export class ChatbotService {
     }
 
     if (tool === 'get_event_detail') {
-      return `${LEAFIA_SYSTEM}\n\nChi tiết:\n${context?.title} - ${context?.location}\n\nCâu hỏi: ${message}`;
+      const event = context as Event;
+      return `${LEAFIA_SYSTEM}\n\nChi tiết:\n${event?.title} - ${event?.location}\n\nCâu hỏi: ${message}`;
     }
 
     return `${LEAFIA_SYSTEM}\n\n${message}`;
   }
 
-  //  MAIN CHAT 
+  //  MAIN CHAT
   async chat(dto: ChatDto): Promise<ChatResponse> {
-  const message = dto.message?.trim();
-  if (!message) throw new BadRequestException('Message required');
+    const message = dto.message?.trim();
+    if (!message) throw new BadRequestException('Message required');
 
-  const tool = this.route(message);
-  let context: any = null;
+    const tool = this.route(message);
+    let context: ChatContext = null;
 
-  try {
-    if (tool === 'get_events') {
-      context = await this.fetchEventList();
-    }
+    try {
+      if (tool === 'get_events') {
+        context = await this.fetchEventList();
+      }
 
-    if (tool === 'get_event_detail') {
+      if (tool === 'get_event_detail') {
         context = await this.fetchEventDetail(message);
       }
 
-    if (tool === 'get_nearby_events') {
-      if (!dto.lat || !dto.lng) {
-        return {
-          response: 'Bạn cần bật vị trí để tìm sự kiện gần bạn.',
-          tool,
-          timestamp: new Date(),
-        };
+      if (tool === 'get_nearby_events') {
+        if (!dto.lat || !dto.lng) {
+          return {
+            response: 'Bạn cần bật vị trí để tìm sự kiện gần bạn.',
+            tool,
+            timestamp: new Date(),
+          };
+        }
+        context = await this.fetchNearbyEvents(dto.lat, dto.lng);
       }
-      context = await this.fetchNearbyEvents(dto.lat, dto.lng);
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+      this.logger.warn(`DB error: ${errorMsg}`);
     }
-  } catch (err: any) {
-    this.logger.warn(`DB error: ${err?.message}`);
+
+    // 1. Không gọi AI cho knowledge có sẵn
+    if (
+      tool === 'app_info' ||
+      tool === 'app_guide' ||
+      tool === 'eco_knowledge'
+    ) {
+      return {
+        response: APP_KNOWLEDGE[tool],
+        tool,
+        timestamp: new Date(),
+      };
+    }
+
+    // 2. Không gọi AI nếu đã có data rõ ràng
+    if (tool === 'get_events' && Array.isArray(context) && context.length > 0) {
+      return {
+        response: this.formatEvents(context as Event[]),
+        tool,
+        timestamp: new Date(),
+      };
+    }
+
+    if (
+      tool === 'get_nearby_events' &&
+      Array.isArray(context) &&
+      context.length > 0
+    ) {
+      const nearbyEvents = context as NearbyEvent[];
+      const list = nearbyEvents
+        .map(
+          (e: NearbyEvent, i: number) =>
+            `${i + 1}. ${e.title} - ${e.location} (${e.distanceKm}km)`,
+        )
+        .join('\n');
+
+      return {
+        response: list,
+        tool,
+        timestamp: new Date(),
+      };
+    }
+
+    if (tool === 'get_event_detail' && context && !Array.isArray(context)) {
+      const event = context;
+      return {
+        response: `${event.title} - ${event.location}`,
+        tool,
+        timestamp: new Date(),
+      };
+    }
+
+    const prompt = this.buildPrompt(message, tool, context);
+
+    // CACHE
+    if (this.cache.has(prompt)) {
+      return {
+        response: this.cache.get(prompt)!,
+        tool,
+        timestamp: new Date(),
+      };
+    }
+
+    try {
+      const text = await this.callGemini(prompt);
+
+      this.cache.set(prompt, text);
+
+      return {
+        response: text,
+        tool,
+        timestamp: new Date(),
+      };
+    } catch (err: any) {
+      this.logger.error('Gemini error', err);
+
+      return {
+        response: this.buildFallback(tool),
+        tool,
+        timestamp: new Date(),
+      };
+    }
   }
-
-  // 1. Không gọi AI cho knowledge có sẵn
-  if (tool === 'app_info' || tool === 'app_guide' || tool === 'eco_knowledge') {
-    return {
-      response: APP_KNOWLEDGE[tool],
-      tool,
-      timestamp: new Date(),
-    };
-  }
-
-  // 2. Không gọi AI nếu đã có data rõ ràng
-  if (tool === 'get_events' && context?.length) {
-    return {
-      response: this.formatEvents(context),
-      tool,
-      timestamp: new Date(),
-    };
-  }
-
-  if (tool === 'get_nearby_events' && context?.length) {
-    const list = context
-      .map((e: any, i: number) =>
-        `${i + 1}. ${e.title} - ${e.location} (${e.distanceKm}km)`
-      )
-      .join('\n');
-
-    return {
-      response: list,
-      tool,
-      timestamp: new Date(),
-    };
-  }
-
-  if (tool === 'get_event_detail' && context) {
-    return {
-      response: `${context.title} - ${context.location}`,
-      tool,
-      timestamp: new Date(),
-    };
-  }
-
-  const prompt = this.buildPrompt(message, tool, context);
-
-  // CACHE
-  if (this.cache.has(prompt)) {
-    return {
-      response: this.cache.get(prompt)!,
-      tool,
-      timestamp: new Date(),
-    };
-  }
-
-  try {
-    const text = await this.callGemini(prompt);
-
-    this.cache.set(prompt, text);
-
-    return {
-      response: text,
-      tool,
-      timestamp: new Date(),
-    };
-  } catch (err: any) {
-    this.logger.error('Gemini error', err);
-
-    return {
-      response: this.buildFallback(tool),
-      tool,
-      timestamp: new Date(),
-    };
-  }
-}
 
   //  Fallback
   private buildFallback(tool: Intent): string {
     if (tool === 'app_info') return 'GreenGrass là app sống xanh.';
-    if (tool === 'app_guide') return 'Đăng nhập → tham gia → check-in → tích điểm.';
+    if (tool === 'app_guide')
+      return 'Đăng nhập → tham gia → check-in → tích điểm.';
     if (tool === 'eco_knowledge') return 'Hãy giảm rác và trồng cây.';
 
     return 'Hiện hệ thống đang bận, bạn thử lại sau nhé.';
   }
 
   // ─── Recommendations ──────────────────────────────────
-  async getRecommendations(): Promise<string[]> {
+  getRecommendations(): string[] {
     return [
       'Tham gia sự kiện trồng cây xanh tại công viên gần bạn',
       'Tham gia chiến dịch dọn rác bãi biển cuối tuần này',

@@ -26,8 +26,8 @@ export class ChatbotController {
 
   @Public()
   @Get('recommendations')
-  async getRecommendations() {
-    const data = await this.chatbotService.getRecommendations();
+  getRecommendations() {
+    const data = this.chatbotService.getRecommendations();
     return { success: true, data };
   }
 }
