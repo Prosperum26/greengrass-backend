@@ -27,6 +27,27 @@ interface NearbyEvent {
   distanceKm: string;
 }
 
+interface OpenRouterError {
+  message: string;
+  code?: number;
+}
+
+interface OpenRouterMessage {
+  role: string;
+  content: string;
+}
+
+interface OpenRouterChoice {
+  message?: {
+    content?: string;
+  };
+}
+
+interface OpenRouterResponse {
+  choices?: OpenRouterChoice[];
+  error?: OpenRouterError;
+}
+
 type ChatContext = Event[] | NearbyEvent[] | Event | null | undefined;
 
 export interface ChatResponse {
@@ -179,7 +200,11 @@ export class ChatbotService {
   }
 
   // Call OpenRouter AI API with retry logic
-  private async callAI(prompt: string, systemMessage?: string, retry = 2): Promise<string> {
+  private async callAI(
+    prompt: string,
+    systemMessage?: string,
+    retry = 2,
+  ): Promise<string> {
     const apiKey = this.config.get<string>('OPENROUTER_API_KEY');
     if (!apiKey) {
       throw new Error('Missing OPENROUTER_API_KEY environment variable');
@@ -197,7 +222,7 @@ export class ChatbotService {
     };
 
     // Build messages array with proper system/user separation
-    const messages: Array<{ role: string; content: string }> = [];
+    const messages: OpenRouterMessage[] = [];
     if (systemMessage) {
       messages.push({ role: 'system', content: systemMessage });
     }
@@ -212,11 +237,17 @@ export class ChatbotService {
     };
 
     try {
-      this.logger.debug(`Calling OpenRouter with model: ${this.OPENROUTER_MODEL}`);
+      this.logger.debug(
+        `Calling OpenRouter with model: ${this.OPENROUTER_MODEL}`,
+      );
       this.logger.debug(`Request body: ${JSON.stringify(body)}`);
-      
-      const response = await axios.post(this.OPENROUTER_URL, body, config);
-      
+
+      const response = await axios.post<OpenRouterResponse>(
+        this.OPENROUTER_URL,
+        body,
+        config,
+      );
+
       // Check for non-2xx status codes
       if (response.status >= 400) {
         const errorData = response.data;
@@ -243,11 +274,11 @@ export class ChatbotService {
       return content.trim();
     } catch (err: unknown) {
       let errorMsg = 'Unknown error';
-      
+
       if (err instanceof Error) {
         errorMsg = err.message;
       }
-      
+
       this.logger.warn(`OpenRouter API error: ${errorMsg}`);
 
       // Retry up to 2 times (except for 401/403 auth errors)
