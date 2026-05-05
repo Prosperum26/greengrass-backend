@@ -1,8 +1,8 @@
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import { Event } from '@prisma/client';
+import axios, { AxiosRequestConfig } from 'axios';
 
 // ─── Types ───────────────────────────────────────────────
 type Intent =
@@ -79,10 +79,11 @@ Kiến thức môi trường cơ bản (dùng khi user hỏi):
 @Injectable()
 export class ChatbotService {
   private readonly logger = new Logger(ChatbotService.name);
+  private readonly OPENROUTER_URL =
+    'https://openrouter.ai/api/v1/chat/completions';
+  // Use openrouter/auto to automatically select an available free model
+  private readonly OPENROUTER_MODEL = 'openrouter/auto';
 
-  private model: ReturnType<
-    InstanceType<typeof GoogleGenerativeAI>['getGenerativeModel']
-  >;
   // simple cache
   private cache = new Map<string, string>();
 
@@ -90,16 +91,7 @@ export class ChatbotService {
     private prisma: PrismaService,
     private config: ConfigService,
   ) {
-    const apiKey = this.config.get<string>('GEMINI_API_KEY');
-    if (!apiKey) throw new Error('Missing GEMINI_API_KEY');
-
-    const genAI = new GoogleGenerativeAI(apiKey);
-
-    this.model = genAI.getGenerativeModel({
-      model: 'gemini-2.0-flash',
-    });
-
-    this.logger.log('Chatbot ready');
+    this.logger.log('Chatbot ready (OpenRouter API)');
   }
 
   // ─── Router (improved order) ───────────────────────────
@@ -186,23 +178,89 @@ export class ChatbotService {
       .slice(0, 5);
   }
 
-  // Retry Gemini
-  private async callGemini(prompt: string, retry = 2): Promise<string> {
+  // Call OpenRouter AI API with retry logic
+  private async callAI(prompt: string, systemMessage?: string, retry = 2): Promise<string> {
+    const apiKey = this.config.get<string>('OPENROUTER_API_KEY');
+    if (!apiKey) {
+      throw new Error('Missing OPENROUTER_API_KEY environment variable');
+    }
+
+    const config: AxiosRequestConfig = {
+      timeout: 10000, // 10 seconds timeout
+      validateStatus: () => true, // Don't throw on any status code
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+        'HTTP-Referer': 'http://localhost:3000',
+        'X-OpenRouter-Title': 'GreenGrass',
+      },
+    };
+
+    // Build messages array with proper system/user separation
+    const messages: Array<{ role: string; content: string }> = [];
+    if (systemMessage) {
+      messages.push({ role: 'system', content: systemMessage });
+    }
+    messages.push({ role: 'user', content: prompt });
+
+    const body = {
+      model: this.OPENROUTER_MODEL,
+      messages,
+      temperature: 0.7,
+      max_tokens: 500,
+      top_p: 1,
+    };
+
     try {
-      const result = await this.model.generateContent(prompt);
-      return result.response.text().trim();
-    } catch (err: unknown) {
-      if (
-        err instanceof Error &&
-        'status' in err &&
-        err.status === 429 &&
-        retry > 0
-      ) {
-        this.logger.warn('Rate limit → wait 45s...');
-        await new Promise((res) => setTimeout(res, 45000));
-        return this.callGemini(prompt, retry - 1);
+      this.logger.debug(`Calling OpenRouter with model: ${this.OPENROUTER_MODEL}`);
+      this.logger.debug(`Request body: ${JSON.stringify(body)}`);
+      
+      const response = await axios.post(this.OPENROUTER_URL, body, config);
+      
+      // Check for non-2xx status codes
+      if (response.status >= 400) {
+        const errorData = response.data;
+        this.logger.error(`OpenRouter returned ${response.status}:`, errorData);
+        throw new Error(
+          `OpenRouter API error (${response.status}): ${JSON.stringify(errorData)}`,
+        );
       }
-      throw err;
+
+      // Handle error response from OpenRouter
+      if (response.data?.error) {
+        throw new Error(
+          `OpenRouter API error: ${response.data.error.message || JSON.stringify(response.data.error)}`,
+        );
+      }
+
+      // Extract AI response from OpenAI-compatible format
+      const content = response.data?.choices?.[0]?.message?.content;
+
+      if (!content || typeof content !== 'string') {
+        throw new Error('Invalid response structure from OpenRouter API');
+      }
+
+      return content.trim();
+    } catch (err: unknown) {
+      let errorMsg = 'Unknown error';
+      
+      if (err instanceof Error) {
+        errorMsg = err.message;
+      }
+      
+      this.logger.warn(`OpenRouter API error: ${errorMsg}`);
+
+      // Retry up to 2 times (except for 401/403 auth errors)
+      if (retry > 0 && !errorMsg.includes('401') && !errorMsg.includes('403')) {
+        this.logger.log(
+          `Retrying OpenRouter API call... (${retry} attempts left)`,
+        );
+        return this.callAI(prompt, systemMessage, retry - 1);
+      }
+
+      // Log final error but don't crash
+      this.logger.error('OpenRouter API failed after retries', errorMsg);
+      throw new Error('AI service unavailable');
     }
   }
 
@@ -215,30 +273,27 @@ export class ChatbotService {
       .join('\n\n');
   }
 
-  //  Prompt builder
+  //  Prompt builder - returns [systemMessage, userPrompt]
   private buildPrompt(
     message: string,
     tool: Intent,
     context: ChatContext,
-  ): string {
+  ): [string, string] {
+    const systemMsg = LEAFIA_SYSTEM;
+    let userPrompt = '';
+
     if (
       tool === 'app_info' ||
       tool === 'app_guide' ||
       tool === 'eco_knowledge'
     ) {
-      return `${LEAFIA_SYSTEM}\n\n${APP_KNOWLEDGE[tool]}\n\nCâu hỏi: ${message}`;
-    }
-
-    if (!context && tool !== 'general') {
-      return `${LEAFIA_SYSTEM}\n\nKhông có dữ liệu.\n\nCâu hỏi: ${message}`;
-    }
-
-    if (tool === 'get_events') {
+      userPrompt = `${APP_KNOWLEDGE[tool]}\n\nCâu hỏi: ${message}`;
+    } else if (!context && tool !== 'general') {
+      userPrompt = `Không có dữ liệu.\n\nCâu hỏi: ${message}`;
+    } else if (tool === 'get_events') {
       const events = context as Event[];
-      return `${LEAFIA_SYSTEM}\n\nDanh sách:\n${this.formatEvents(events)}\n\nCâu hỏi: ${message}`;
-    }
-
-    if (tool === 'get_nearby_events') {
+      userPrompt = `Danh sách:\n${this.formatEvents(events)}\n\nCâu hỏi: ${message}`;
+    } else if (tool === 'get_nearby_events') {
       const nearbyEvents = context as NearbyEvent[];
       const list = nearbyEvents
         .map(
@@ -246,16 +301,15 @@ export class ChatbotService {
             `${i + 1}. ${e.title} - ${e.location} (${e.distanceKm}km)`,
         )
         .join('\n');
-
-      return `${LEAFIA_SYSTEM}\n\nGần bạn:\n${list}\n\nCâu hỏi: ${message}`;
-    }
-
-    if (tool === 'get_event_detail') {
+      userPrompt = `Gần bạn:\n${list}\n\nCâu hỏi: ${message}`;
+    } else if (tool === 'get_event_detail') {
       const event = context as Event;
-      return `${LEAFIA_SYSTEM}\n\nChi tiết:\n${event?.title} - ${event?.location}\n\nCâu hỏi: ${message}`;
+      userPrompt = `Chi tiết:\n${event?.title} - ${event?.location}\n\nCâu hỏi: ${message}`;
+    } else {
+      userPrompt = message;
     }
 
-    return `${LEAFIA_SYSTEM}\n\n${message}`;
+    return [systemMsg, userPrompt];
   }
 
   //  MAIN CHAT
@@ -341,29 +395,30 @@ export class ChatbotService {
       };
     }
 
-    const prompt = this.buildPrompt(message, tool, context);
+    const [systemMsg, userPrompt] = this.buildPrompt(message, tool, context);
 
     // CACHE
-    if (this.cache.has(prompt)) {
+    if (this.cache.has(userPrompt)) {
       return {
-        response: this.cache.get(prompt)!,
+        response: this.cache.get(userPrompt)!,
         tool,
         timestamp: new Date(),
       };
     }
 
     try {
-      const text = await this.callGemini(prompt);
+      const text = await this.callAI(userPrompt, systemMsg);
 
-      this.cache.set(prompt, text);
+      this.cache.set(userPrompt, text);
 
       return {
         response: text,
         tool,
         timestamp: new Date(),
       };
-    } catch (err: any) {
-      this.logger.error('Gemini error', err);
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      this.logger.error('AI API error', errorMsg);
 
       return {
         response: this.buildFallback(tool),
