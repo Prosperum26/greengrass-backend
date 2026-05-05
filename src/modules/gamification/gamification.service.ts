@@ -219,6 +219,38 @@ export class GamificationService {
         this.getUserRank(userId),
       ]);
 
+    // Retroactive: Award First Green Step badge to users who checked in before badge system existed
+    // Check if user has any check-in but doesn't have the First Green Step badge
+    const hasCheckIn = await this.prisma.eventRegistration.count({
+      where: {
+        userId,
+        status: { in: ['CHECKED_IN', 'COMPLETED'] },
+      },
+    });
+
+    const hasFirstStepBadge = badges.some(
+      (b) => b.badge?.name === 'First Green Step',
+    );
+
+    if (hasCheckIn > 0 && !hasFirstStepBadge) {
+      // Award retroactive badge and include it in the response
+      try {
+        await this.awardFirstEventBadge(userId);
+        // Re-fetch badges to include the newly awarded one
+        const updatedBadges = await this.prisma.userBadge.findMany({
+          where: { userId },
+          include: { badge: true },
+        });
+        badges.length = 0;
+        badges.push(...updatedBadges);
+      } catch (err) {
+        this.logger.error(
+          `Failed to retroactive award First Green Step to user ${userId}:`,
+          err,
+        );
+      }
+    }
+
     return {
       userId: user.id,
       totalPoints: user.totalPoints,
