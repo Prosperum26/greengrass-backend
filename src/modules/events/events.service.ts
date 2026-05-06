@@ -600,7 +600,8 @@ export class EventsService {
     // Convert back to 0 for API response if it's the unlimited value
     const response = {
       ...updated,
-      checkinRadius: updated.checkinRadius === 20076000 ? 0 : updated.checkinRadius,
+      checkinRadius:
+        updated.checkinRadius === 20076000 ? 0 : updated.checkinRadius,
     };
 
     return withDynamicStatus(response);
