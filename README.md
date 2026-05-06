@@ -39,16 +39,18 @@ Dự án này được thiết kế để hỗ trợ cả phát triển cục b�
 
 ### Các Module Chính
 
-- `auth`: đăng nhập/đăng ký/refresh/đăng xuất
+- `auth`: đăng nhập/đăng ký/refresh/đăng xuất (JWT + Google OAuth)
 - `users`: hồ sơ và thống kê người dùng
 - `events`: event CRUD, đăng ký, xem người tham gia
-- `checkin`: tạo QR và check-in sự kiện
-- `gamification`: điểm, huy hiệu, bảng xếp hạng
+- `registrations`: quản lý đăng ký sự kiện riêng biệt
+- `checkin`: tạo QR và check-in sự kiện với xác thực GPS
+- `gamification`: điểm, huy hiệu, streaks
+- `leaderboard`: bảng xếp hạng người dùng
 - `notifications`: thông báo trong ứng dụng + nhắc nhở theo lịch
 - `map`: đánh dấu bản đồ và tìm kiếm lân cận
 - `admin`: luồng xem xét yêu cầu người tổ chức
-- `upload`: upload ảnh lên đám mây
-- `chatbot`: tích hợp trợ lý AI
+- `upload`: upload ảnh lên Cloudinary
+- `chatbot`: tích hợp trợ lý AI (OpenRouter API)
 
 ### Luồng Dữ Liệu (Request Điển Hình)
 
@@ -75,11 +77,42 @@ yarn install
 
 ### 2) Cấu hình môi trường
 
-```bash
-cp .env.example .env
-```
+Tạo file `.env` trong thư mục gốc với các biến sau:
 
-Cập nhật các giá trị bắt buộc trong `.env` (ít nhất `DATABASE_URL`, `JWT_SECRET`, `JWT_REFRESH_SECRET`, `QR_SECRET`, `ALLOWED_ORIGINS`).
+```env
+# Database
+DATABASE_URL=postgresql://user:password@localhost:5432/greengrass
+
+# JWT Secrets (tối thiểu 32 ký tự)
+JWT_SECRET=your-jwt-secret-key-min-32-characters
+JWT_REFRESH_SECRET=your-refresh-secret-key-min-32-char
+
+# QR Check-in Secret (tối thiểu 16 ký tự)
+QR_SECRET=your-qr-secret-key
+
+# CORS
+ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000
+
+# Server
+NODE_ENV=development
+PORT=3000
+
+# Admin Account (cho seed)
+ADMIN_EMAIL=admin@example.com
+ADMIN_PASSWORD=admin123
+ADMIN_FULL_NAME=System Admin
+
+# Google OAuth (tùy chọn)
+GOOGLE_CLIENT_ID=your-google-client-id
+
+# Cloudinary (tùy chọn)
+CLOUDINARY_CLOUD_NAME=your-cloud
+CLOUDINARY_API_KEY=your-key
+CLOUDINARY_API_SECRET=your-secret
+
+# OpenRouter AI (tùy chọn)
+OPENROUTER_API_KEY=your-openrouter-key
+```
 
 ### 3) Chạy database migrations
 
@@ -121,7 +154,7 @@ Tạo Render web service và kết nối repository. Đảm bảo tất cả cá
 
 ## Hướng Dẫn Biến Môi Trường
 
-Xem `.env.example` cho danh sách đầy đủ. Các biến bắt buộc cốt lõi:
+Các biến bắt buộc cốt lõi:
 
 - `DATABASE_URL`: chuỗi kết nối PostgreSQL
 - `JWT_SECRET`: bí mật ký access token (khuyến nghị tối thiểu 32 ký tự)
@@ -138,7 +171,8 @@ Tích hợp tùy chọn:
 
 - `GOOGLE_CLIENT_ID`
 - `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`
-- `GEMINI_API_KEY`
+- `OPENROUTER_API_KEY`
+- `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_FULL_NAME`
 
 ## Tài Liệu API (Cơ Bản)
 
@@ -153,11 +187,16 @@ Swagger UI được bật trong môi trường phát triển:
 - Auth: `/auth/*`
 - Users: `/users/*`
 - Events: `/events/*`
+- Registrations: `/registrations/*`
 - Check-in: `/events/:eventId/qr`, `/events/:eventId/check-in`
-- Gamification: `/points/*`
+- Gamification: `/points/*`, `/badges/*`
+- Leaderboard: `/leaderboard/*`
 - Notifications: `/notifications/*`
 - Admin: `/admin/*`
 - Map: `/map/*`
+- Upload: `/upload/*`
+- Chatbot: `/chatbot/*`
+- Forum: `/forum/*`
 
 ### Định dạng header Auth
 
