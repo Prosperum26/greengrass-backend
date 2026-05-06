@@ -26,6 +26,7 @@ const EVENT_SELECT = {
   location: true,
   latitude: true,
   longitude: true,
+  checkinRadius: true,
   startTime: true,
   endTime: true,
   points: true,
@@ -162,6 +163,10 @@ export class EventsService {
       coverImagePublicId = uploadResult.publicId;
     }
 
+    // Handle checkinRadius: 0 means unlimited (half earth circumference ~20076000m)
+    const finalCheckinRadius =
+      dto.checkinRadius === 0 ? 20076000 : (dto.checkinRadius ?? 50);
+
     const event = await this.prisma.event.create({
       data: {
         title: dto.title,
@@ -169,6 +174,7 @@ export class EventsService {
         location: dto.location,
         latitude: dto.latitude,
         longitude: dto.longitude,
+        checkinRadius: finalCheckinRadius,
         startTime,
         endTime,
         points: dto.points,
@@ -201,7 +207,13 @@ export class EventsService {
       });
     }
 
-    return withDynamicStatus(event);
+    // Convert back to 0 for API response if it's the unlimited value
+    const response = {
+      ...event,
+      checkinRadius: event.checkinRadius === 20076000 ? 0 : event.checkinRadius,
+    };
+
+    return withDynamicStatus(response);
   }
 
   async addGalleryImage(
@@ -564,18 +576,34 @@ export class EventsService {
     // FIX 4: recompute and persist status so DB stays in sync
     const newStatus = deriveStatus(newStartTime, newEndTime);
 
+    // Convert checkinRadius: 0 means unlimited (half earth circumference ~20076000m)
+    let finalCheckinRadius = dto.checkinRadius;
+    if (dto.checkinRadius !== undefined) {
+      finalCheckinRadius =
+        dto.checkinRadius === 0 ? 20076000 : dto.checkinRadius;
+    }
+
     const updated = await this.prisma.event.update({
       where: { id },
       data: {
         ...dto,
         ...(dto.startTime && { startTime: newStartTime }),
         ...(dto.endTime && { endTime: newEndTime }),
+        ...(finalCheckinRadius !== undefined && {
+          checkinRadius: finalCheckinRadius,
+        }),
         status: newStatus,
       },
       select: EVENT_SELECT,
     });
 
-    return withDynamicStatus(updated);
+    // Convert back to 0 for API response if it's the unlimited value
+    const response = {
+      ...updated,
+      checkinRadius: updated.checkinRadius === 20076000 ? 0 : updated.checkinRadius,
+    };
+
+    return withDynamicStatus(response);
   }
 
   async deleteEvent(id: string, userId: string, userRole?: string) {

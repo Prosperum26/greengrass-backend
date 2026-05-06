@@ -65,15 +65,15 @@ export class CreateEventDto {
   longitude!: number;
 
   @ApiPropertyOptional({
-    description: 'Check-in radius in meters',
+    description: 'Check-in radius in meters (0 = unlimited, max 2000m)',
     example: 50,
-    minimum: 1,
-    maximum: 1000,
+    minimum: 0,
+    maximum: 2000,
   })
   @IsOptional()
   @IsNumber()
-  @Min(1)
-  @Max(1000)
+  @Min(0)
+  @Max(2000)
   @Type(() => Number)
   checkinRadius?: number;
 
